@@ -113,7 +113,48 @@ export default function useAuth() {
             popup: 'animate__animated animate__fadeInUp animate__faster'
           }
         });
-      } else {
+      } else if (data.message == "User already exists") {
+        Swal.fire({
+          icon: "warning",
+          iconColor: "#BC6C25",
+          title: '<span style="font-family: serif; font-weight: bold; color: #4A3728;">Email user sudah terdaftar</span>',
+          background: "#FDFBF7",
+          confirmButtonColor: "#4A3728",
+          confirmButtonText: "COBA LAGI",
+          customClass: {
+            popup: 'rounded-[2.5rem] border border-[#E8DFD5] shadow-2xl',
+            confirmButton: 'rounded-xl px-10 py-3 font-bold uppercase tracking-[0.2em] text-[10px]',
+            title: 'text-2xl',
+            htmlContainer: 'text-[#8C6A53] font-medium'
+          },
+
+
+          showClass: {
+            popup: 'animate__animated animate__headShake'
+          }
+        });
+      } else if (data.message == "Invalid email format") {
+        Swal.fire({
+          icon: "warning",
+          iconColor: "#BC6C25",
+          title: '<span style="font-family: serif; font-weight: bold; color: #4A3728;">Format Email tidak valid</span>',
+          background: "#FDFBF7",
+          confirmButtonColor: "#4A3728",
+          confirmButtonText: "COBA LAGI",
+          customClass: {
+            popup: 'rounded-[2.5rem] border border-[#E8DFD5] shadow-2xl',
+            confirmButton: 'rounded-xl px-10 py-3 font-bold uppercase tracking-[0.2em] text-[10px]',
+            title: 'text-2xl',
+            htmlContainer: 'text-[#8C6A53] font-medium'
+          },
+
+
+          showClass: {
+            popup: 'animate__animated animate__headShake'
+          }
+        });
+      }
+      else {
         Swal.fire({
           icon: "warning",
           iconColor: "#BC6C25",

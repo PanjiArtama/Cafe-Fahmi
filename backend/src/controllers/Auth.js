@@ -54,8 +54,15 @@ export const Register = async (req, res) => {
         const existingUser = await User.findOne({
             email: email
         });
+        function isValidSyntax(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
         if (existingUser) {
             return res.status(400).json({ message: "User already exists" });
+        }
+        if (!isValidSyntax(email)) {
+            return res.status(400).json({ message: "Invalid email format" });
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = new User({

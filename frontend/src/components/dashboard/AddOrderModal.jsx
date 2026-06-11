@@ -74,7 +74,6 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
     };
 
     // Cart State
-
     const minusCart = (productId) => {
         setCart(cart.map(item => item.productId === productId
             ? { ...item, quantity: Math.max(1, item.quantity - 1) } : item));

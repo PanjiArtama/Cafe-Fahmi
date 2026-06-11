@@ -16,9 +16,7 @@ export default function MenuCard({ item }) {
                 <p className="text-[13px] text-[#8b7060] leading-relaxed font-light mb-6 md:min-h-15">{item.desc}</p>
                 <div className="border-t border-[#ede8e0] pt-4 flex justify-between items-center">
                     <span className="font-serif text-lg md:text-xl font-semibold text-[#8b6442]">{item.price}</span>
-                    <button className="text-[10px] tracking-widest text-[#2a1a0f] border-b border-[#2a1a0f] pb-1 hover:text-[#c8a97a] hover:border-[#c8a97a] transition-all uppercase">
-                        Pesan
-                    </button>
+                    
                 </div>
             </div>
         </div>

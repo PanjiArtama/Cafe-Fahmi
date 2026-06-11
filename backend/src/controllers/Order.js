@@ -181,6 +181,10 @@ export const getOrdersByUser = async (req, res) => {
             })
             .sort({ orderDate: -1 });
 
+        if (!orders.length) {
+            return res.status(404).json({ message: "No orders found for this user" });
+        }
+
         res.json(orders);
 
     } catch (err) {
