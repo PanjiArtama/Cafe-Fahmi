@@ -6,7 +6,7 @@
   "scripts": {
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --detectOpenHandles --forceExit",
     "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --watch",
-    "start": "nodemon index.js",
+    "dev": "nodemon index.js",
     "seed": "node src/seed.js"
   },
   "keywords": [],

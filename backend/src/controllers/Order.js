@@ -115,7 +115,7 @@ export const changeStatus = async (req, res) => {
 
         const order = await Order.findByIdAndUpdate(
             id,
-            { status },
+            { status, orderDate: new Date() },
             { new: true }
         );
 
@@ -131,7 +131,9 @@ export const changeStatus = async (req, res) => {
 };
 export const getOrders = async (req, res) => {
     try {
-        const orders = await Order.find()
+        const orders = await Order.find({
+        })
+            .sort({ orderDate: -1 }) // Sorts by orderDate, newest first
             .populate({
                 path: "userId",
                 select: "-password"
@@ -215,7 +217,6 @@ export const getOrdersByRange = async (req, res) => {
                 populate: { path: 'productId', select: 'name' }
             })
             .sort({ orderDate: -1 });
-
         res.status(200).json(orders);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -233,12 +234,12 @@ export const downloadExcelReport = async (req, res) => {
         const orders = await Order.find({
             orderDate: { $gte: start, $lte: end }
         })
-        .populate('userId', 'username')
-        .populate({
-            path: 'orderDetails',
-            populate: { path: 'productId', select: 'name' }
-        })
-        .sort({ orderDate: -1 });
+            .populate('userId', 'username')
+            .populate({
+                path: 'orderDetails',
+                populate: { path: 'productId', select: 'name' }
+            })
+            .sort({ orderDate: -1 });
 
         const filename = `Orders_Report_${start.toISOString().split('T')[0]}_to_${end.toISOString().split('T')[0]}`;
         // Call the utility function we made earlier
@@ -260,26 +261,21 @@ export const getDailyStats = async (req, res) => {
 
         const stats = await Order.aggregate([
             {
-                // 1. Filter for today's orders that aren't cancelled
                 $match: {
                     orderDate: { $gte: startOfDay, $lte: endOfDay },
-                    status: 'completed' 
+                    status: 'completed'
                 }
             },
             {
-                // 2. Sum the totals
                 $group: {
                     _id: null,
                     totalOrders: { $sum: 1 },
                     totalRevenue: { $sum: "$totalAmount" },
                     totalDiscount: { $sum: "$discountAmount" },
-                    // Extra: we can also get subtotal if needed
                     totalSubtotal: { $sum: "$subtotalAmount" }
                 }
             }
         ]);
-
-        // 3. Fallback if there are no orders today
         const result = stats.length > 0 ? stats[0] : {
             totalOrders: 0,
             totalRevenue: 0,
