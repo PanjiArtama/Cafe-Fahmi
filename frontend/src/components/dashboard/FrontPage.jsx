@@ -72,9 +72,9 @@ const FrontPage = ({ orders = [], dailyStats = {}, onViewAll }) => {
 
                 <div className="bg-white border border-[#E8DFD5] rounded-[3.5rem] overflow-hidden shadow-sm">
                     <div className="divide-y divide-[#F5EFE6]">
-                        {orders.filter(order => order.status === 'completed').length > 0 ? (
+                        {orders.filter(order => order.status === 'completed' || order.status === 'cancelled').length > 0 ? (
                             orders
-                                .filter(order => order.status === 'completed')
+                                .filter(order => order.status === 'completed' || order.status === 'cancelled')
                                 .slice(0, 8)
                                 .map((order) => (
                                     <div key={order._id} className="p-8 flex flex-wrap items-center justify-between hover:bg-[#FDFBF7] transition-colors cursor-pointer">

@@ -56,7 +56,6 @@ const OrderHistoryTable = ({ data, onDetail }) => {
     }
 
     const columns = useMemo(() => [
-        
         columnHelper.accessor(row => row.userId ? row.userId.username : (row.guestName || 'Guest'), {
             id: 'customer',
             header: 'Customer',
@@ -88,6 +87,28 @@ const OrderHistoryTable = ({ data, onDetail }) => {
             header: 'Total Price',
             cell: info => <span className="text-sm font-bold">Rp {info.getValue().toLocaleString()}</span>,
         }),
+        // --- NEW STATUS COLUMN ---
+        columnHelper.accessor('status', {
+            id: 'status',
+            header: 'Status',
+            cell: info => {
+                const status = info.getValue();
+                const isCompleted = status === 'completed';
+                return (
+                    <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border ${isCompleted
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                        : 'bg-orange-50 text-orange-700 border-orange-100'
+                        }`}>
+                        {status}
+                    </span>
+                );
+            },
+            // Optional: adds a filter function if you want to implement filtering by status later
+            filterFn: (row, columnId, filterValue) => {
+                if (!filterValue || filterValue === 'all') return true;
+                return row.getValue(columnId) === filterValue;
+            }
+        }),
         columnHelper.accessor('orderDate', {
             header: 'Date',
             cell: info => {
@@ -103,7 +124,6 @@ const OrderHistoryTable = ({ data, onDetail }) => {
             },
         }),
     ], []);
-
     const table = useReactTable({
         data: finalData,
         columns,
