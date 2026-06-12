@@ -488,6 +488,7 @@ export const getOrderByRange = async (startDate, endDate) => {
         }
     })
     return response;
+
 }
 
 export const getDailyStats = async () => {
