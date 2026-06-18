@@ -328,7 +328,7 @@ export const updateWebInformation = async (data) => {
     const freshToken = localStorage.getItem("token");
     const formData = new FormData();
 
-    // Append simple text fields
+    
     formData.append('mainTitle', data.mainTitle);
     formData.append('shortDesc', data.shortDesc);
     formData.append('longDesc', data.longDesc);
@@ -341,7 +341,7 @@ export const updateWebInformation = async (data) => {
     formData.append('mapsLink', data.mapsLink);
     formData.append('openingHours', JSON.stringify(data.openingHours));
 
-    // Build gallery metadata and file map
+    
     const galleryMeta = [];
     const galleryFileMap = {};
 
@@ -353,7 +353,7 @@ export const updateWebInformation = async (data) => {
                 imagePath: item.imagePath || ''
             });
 
-            // If this item has a new file (File object), append it
+            
             if (item.file instanceof File) {
                 formData.append('galleryImages', item.file);
                 galleryFileMap[String(index)] = true;
@@ -425,15 +425,14 @@ export const updateProfile = async (formData) => {
 
 export const handleExportExcel = async (startDate, endDate) => {
     try {
-        // 1. Construct URL with query parameters
+        
         const endpoint = "/admin/order/getReportByRange";
         const params = new URLSearchParams({ startDate, endDate });
         const url = `${endpoint}?${params.toString()}`;
-        // 2. Fetch with Authorization headers
+        
         const response = await fetch(`${baseUrl}${url}`, {
             method: 'GET',
             headers: {
-                // Replace with however you store your admin token
                 'Authorization': `Bearer ${localStorage.getItem('token')}`,
             },
         });
@@ -443,31 +442,31 @@ export const handleExportExcel = async (startDate, endDate) => {
             throw new Error(errorData.message || 'Failed to download report');
         }
 
-        // 3. Convert response to a Blob (Binary Large Object)
+        
         const blob = await response.blob();
 
-        // 4. Create a temporary URL for the Blob
+        
         const downloadUrl = window.URL.createObjectURL(blob);
 
-        // 5. Create a hidden <a> tag to trigger the download
+        
         const link = document.createElement('a');
         link.href = downloadUrl;
 
-        // Set the file name (matches what we did in the backend)
+        
         const dateStr = new Date().toISOString().split('T')[0];
         link.setAttribute('download', `Order_Report_${dateStr}.xlsx`);
 
-        // Append, click, and remove
+        
         document.body.appendChild(link);
         link.click();
         link.parentNode.removeChild(link);
 
-        // 6. Clean up the URL object to free up memory
+        
         window.URL.revokeObjectURL(downloadUrl);
 
     } catch (error) {
         console.error("Export Error:", error);
-        // You can trigger your custom Swal.fire error here!
+        
         Toast.fire({
             icon: 'error',
             iconColor: '#f43f5e',
@@ -509,7 +508,7 @@ export const getDailyStats = async () => {
     return data;
 }
 
-// ── Material CRUD ──────────────────────────────────────────────────────────
+
 
 export const getMaterials = async () => {
     const response = await fetch(`${baseUrl}/admin/material/`, {
