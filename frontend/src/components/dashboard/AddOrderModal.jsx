@@ -73,14 +73,49 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
         setIsScanning(false);
     };
 
+    const getAvailableStockForProduct = (product) => {
+        if (!product || !product.composition || product.composition.length === 0) return Infinity;
+
+        const materialUsage = {};
+        for (const item of cart) {
+            const cartProduct = productList.find(p => p._id === item.productId);
+            if (cartProduct && cartProduct.composition) {
+                for (const comp of cartProduct.composition) {
+                    if (comp.materialId && comp.materialId._id) {
+                        const matId = comp.materialId._id;
+                        materialUsage[matId] = (materialUsage[matId] || 0) + (comp.quantity * item.quantity);
+                    }
+                }
+            }
+        }
+
+        let minPossible = Infinity;
+        for (const comp of product.composition) {
+            if (comp.materialId && comp.materialId._id) {
+                const matId = comp.materialId._id;
+                const totalStock = comp.materialId.stock || 0;
+                const used = materialUsage[matId] || 0;
+                const remainingStock = Math.max(0, totalStock - used);
+                const possibleWithRemaining = Math.floor(remainingStock / comp.quantity);
+                if (possibleWithRemaining < minPossible) {
+                    minPossible = possibleWithRemaining;
+                }
+            }
+        }
+        return minPossible;
+    };
+
     // Cart State
     const minusCart = (productId) => {
         setCart(cart.map(item => item.productId === productId
             ? { ...item, quantity: Math.max(1, item.quantity - 1) } : item));
     };
     const plusCart = (productId) => {
-        setCart(cart.map(item => item.productId === productId
-            ? { ...item, quantity: item.quantity + 1 } : item));
+        const product = productList.find(p => p._id === productId);
+        if (getAvailableStockForProduct(product) > 0) {
+            setCart(cart.map(item => item.productId === productId
+                ? { ...item, quantity: item.quantity + 1 } : item));
+        }
     };
 
     // Filtered user list
@@ -151,6 +186,8 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
 
     const total = Math.max(0, subtotal - discountCalculation.amount);
     const addToCart = (product) => {
+        if (getAvailableStockForProduct(product) <= 0) return;
+
         const existing = cart.find(item => item.productId === product._id);
         if (existing) {
             setCart(cart.map(item => item.productId === product._id
@@ -268,7 +305,8 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
                             <label className="block text-[11px] font-bold uppercase tracking-widest text-[#8C6A53] mb-6 text-center italic">Signature Menu</label>
                             <div className="grid grid-cols-2 xl:grid-cols-3 gap-6">
                                 {productList.map(product => {
-                                    const isOutOfStock = product.isAvailable === false;
+                                    const availableStock = getAvailableStockForProduct(product);
+                                    const isOutOfStock = product.isAvailable === false || availableStock <= 0;
                                     return (
                                         <button 
                                             key={product._id} 
@@ -282,6 +320,9 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
                                             <div className="flex justify-between items-end w-full">
                                                 <div className="flex flex-col items-start">
                                                     <span className="font-bold text-[#8C6A53]">Rp {product.price.toLocaleString()}</span>
+                                                    {product.isAvailable !== false && availableStock !== Infinity && (
+                                                        <span className="text-[10px] font-bold text-[#D9C5B2] uppercase mt-1">Stok: {availableStock}</span>
+                                                    )}
                                                     {isOutOfStock && <span className="text-[10px] font-bold text-red-500 uppercase">Habis</span>}
                                                 </div>
                                                 {!isOutOfStock && (
@@ -316,7 +357,7 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
                                         <div className="flex items-center gap-3 bg-white border border-[#E8DFD5] rounded-xl px-2 py-1">
                                             <button onClick={() => minusCart(item.productId)} className="p-1 text-[#8C6A53]"><Minus size={14} /></button>
                                             <span className="text-sm font-bold text-[#4A3728]">{item.quantity}</span>
-                                            <button onClick={() => plusCart(item.productId)} className="p-1 text-[#8C6A53]"><Plus size={14} /></button>
+                                            <button onClick={() => plusCart(item.productId)} disabled={getAvailableStockForProduct(productList.find(p => p._id === item.productId)) <= 0} className="p-1 text-[#8C6A53] disabled:opacity-30"><Plus size={14} /></button>
                                         </div>
                                     </div>
                                 </div>
