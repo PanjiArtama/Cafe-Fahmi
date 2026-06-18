@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Coffee, LayoutGrid, Package, Menu, X, ShoppingCart, Users, Globe, LayoutDashboard, LogOut } from 'lucide-react';
+import { Coffee, LayoutGrid, Package, Menu, X, ShoppingCart, Users, Globe, LayoutDashboard, LogOut, Layers } from 'lucide-react';
 import NavItem from './NavItem';
 import { getWebInformation } from '../../data/service';
 
@@ -11,6 +11,7 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout }) => {
     { key: 'order', icon: <ShoppingCart size={20} />, label: 'Order Management' },
     { key: 'user', icon: <Users size={20} />, label: 'User Management' },
     { key: 'menu', icon: <Coffee size={20} />, label: 'Menu List' },
+    { key: 'material', icon: <Layers size={20} />, label: 'Bahan Baku' },
     { key: 'coupons', icon: <Package size={20} />, label: 'Coupons' },
     { key: 'companyProfile', icon: <Globe size={20} />, label: 'Company Profile' },
   ];

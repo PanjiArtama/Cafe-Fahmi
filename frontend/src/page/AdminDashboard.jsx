@@ -3,7 +3,7 @@ import { Plus, Search, ChevronRight, CheckCircle2, User, Star } from 'lucide-rea
 
 import { ReceiptText, ExternalLink } from 'lucide-react';
 import { getCategories, getMenuItems, getPublicWebInformation } from '../data/cafeData';
-import { addCategory, AssignCoupon, deleteProduct, getAllCoupon, getAvailableCoupon, getOrders, getUserList, getUserStat, updateWebInformation, getOrderDetail, deleteCoupon, handleExportExcel, getDailyStats } from '../data/service';
+import { addCategory, AssignCoupon, deleteProduct, getAllCoupon, getAvailableCoupon, getOrders, getUserList, getUserStat, updateWebInformation, getOrderDetail, deleteCoupon, handleExportExcel, getDailyStats, getMaterials, deleteMaterial as deleteMaterialApi } from '../data/service';
 
 import Sidebar from '../components/dashboard/Sidebar';
 import MenuTable from '../components/dashboard/MenuTable';
@@ -20,6 +20,8 @@ import CompanyProfileEditor from '../components/dashboard/CompanyProfileEditor';
 import { Toast } from '../utils/Toast';
 import OrderDetailModal from '../components/dashboard/OrderDetailModal';
 import FrontPage from '../components/dashboard/FrontPage';
+import MaterialTable from '../components/dashboard/MaterialTable';
+import MaterialSlideOver from '../components/dashboard/MaterialSlideOver';
 
 // ─── Category Modal Content (controlled) ─────────────────────────────────────
 const CategoryModalContent = ({ value, onChange }) => (
@@ -47,6 +49,7 @@ const Dashboard = () => {
   const [user, setUser] = useState([]);
   const [coupons, setCoupons] = useState([]);
   const [webInfo, setWebInfo] = useState(null);
+  const [materials, setMaterials] = useState([]);
 
   // ── Modal open state ──
   const [categoryModal, setCategoryModal] = useState(false);
@@ -54,6 +57,7 @@ const Dashboard = () => {
   const [isProductOpen, setIsProductOpen] = useState(false);
   const [isCouponOpen, setIsCouponOpen] = useState(false);
   const [isAssignCouponOpen, setIsAssignCouponOpen] = useState(false);
+  const [isMaterialOpen, setIsMaterialOpen] = useState(false);
   const [orderTab, setOrderTab] = useState('ongoing');
   //
   const [selectedUsersForCoupon, setSelectedUsersForCoupon] = useState([]);
@@ -75,6 +79,7 @@ const Dashboard = () => {
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const [editingCoupon, setEditingCoupon] = useState(null);
+  const [editingMaterial, setEditingMaterial] = useState(null);
 
   // ── Controlled form state ──
   const [categoryName, setCategoryName] = useState('');
@@ -84,7 +89,7 @@ const Dashboard = () => {
   const [savingCategory, setSavingCategory] = useState(false);
   const [avalCoupon, setAvalCoupon] = useState([]);
   const fetchAll = async () => {
-    const [menuRes, categories, orders, users, userL, coupons, avCoupon, daily] = await Promise.all([
+    const [menuRes, categories, orders, users, userL, coupons, avCoupon, daily, mats] = await Promise.all([
       getMenuItems(),
       getCategories(),
       getOrders(),
@@ -92,7 +97,8 @@ const Dashboard = () => {
       getUserList(),
       getAllCoupon(),
       getAvailableCoupon(),
-      getDailyStats()
+      getDailyStats(),
+      getMaterials()
     ]);
     setDailyStats(daily);
     setMenuItems(menuRes);
@@ -102,6 +108,7 @@ const Dashboard = () => {
     setUserList(userL)
     setCoupons(coupons);
     setAvalCoupon(avCoupon);
+    setMaterials(mats);
 
     // Fetch web information separately (non-blocking) — uses public endpoint (no auth needed)
     getPublicWebInformation().then(info => { if (info) setWebInfo(info); }).catch(() => { });
@@ -143,10 +150,20 @@ const Dashboard = () => {
     setIsProductOpen(true);
   };
 
+  const openAddMaterial = () => {
+    setEditingMaterial(null);
+    setIsMaterialOpen(true);
+  };
+  const openEditMaterial = (mat) => {
+    setEditingMaterial(mat);
+    setIsMaterialOpen(true);
+  };
+
   const handleAddNew = () => {
     if (activeTab === 'menu') openAddProduct();
     else if (activeTab === 'order') setShowNewOrderModal(true);
     else if (activeTab === 'coupons') openAddCoupon();
+    else if (activeTab === 'material') openAddMaterial();
   };
 
   // ── Save handlers ──────────────────────────────────────────────────────────
@@ -227,6 +244,28 @@ const Dashboard = () => {
     localStorage.clear();
     window.location.href = "/";
   }
+  const onDeleteMaterial = async (material) => {
+    const resp = await deleteMaterialApi(material._id);
+    if (resp.ok) {
+      Toast.fire({
+        icon: 'success',
+        iconColor: '#10b981',
+        title: 'Bahan Dihapus',
+        background: '#ecfdf5',
+        color: '#065f46'
+      });
+      fetchAll();
+    } else {
+      Toast.fire({
+        icon: 'error',
+        iconColor: '#f43f5e',
+        title: 'Gagal Menghapus',
+        background: '#fff1f2',
+        color: '#9f1239'
+      });
+    }
+  }
+
   const onDeleteCoupon = async (product) => {
     const resp = await deleteCoupon(product._id);
     if (resp.ok) {
@@ -256,10 +295,17 @@ const Dashboard = () => {
     <div className="min-h-screen bg-[#FDFBF7] text-[#4A3728] font-sans flex transition-colors duration-500">
 
       {/* ── SlideOver ── */}
+      <MaterialSlideOver
+        isOpen={isMaterialOpen}
+        onClose={() => { setIsMaterialOpen(false); setEditingMaterial(null); fetchAll(); }}
+        initialData={editingMaterial}
+      />
+
       <AddProductSlideOver
         isOpen={isProductOpen}
         onClose={() => { setIsProductOpen(false); setEditingProduct(null); fetchAll();}}
         categories={cat}
+        materials={materials}
         initialData={editingProduct}
       />
       {
@@ -315,7 +361,7 @@ const Dashboard = () => {
                 {activeTab == 'front' ? 'Dashboard' : activeTab}
             </h2>
           </div>
-          {activeTab !== 'user' && activeTab !== 'companyProfile' && activeTab !== 'front' &&
+          {activeTab !== 'user' && activeTab !== 'companyProfile' && activeTab !== 'front' && activeTab !== 'material' &&
             (
               <button
                 onClick={handleAddNew}
@@ -338,6 +384,19 @@ const Dashboard = () => {
           )}
           {activeTab === 'user' && (
             <UserTable rawData={user} onAssignCoupon={(users) => { setIsAssignCouponOpen(true); setSelectedUsersForCoupon(users) }} />
+          )}
+          {activeTab === 'material' && (
+            <>
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={openAddMaterial}
+                  className="flex items-center gap-2 bg-[#8C6A53] hover:bg-[#725541] text-white px-6 md:px-8 py-3 rounded-2xl font-bold transition-all transform hover:-translate-y-1 shadow-lg shadow-[#8C6A53]/20"
+                >
+                  <Plus size={20} /> Tambah Bahan
+                </button>
+              </div>
+              <MaterialTable data={materials} onEdit={openEditMaterial} onDelete={onDeleteMaterial} />
+            </>
           )}
           {activeTab === 'coupons' && (
             <CouponTable data={coupons} onEdit={openEditCoupon} onDelete={onDeleteCoupon} />

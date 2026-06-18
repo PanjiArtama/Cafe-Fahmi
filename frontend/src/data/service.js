@@ -508,3 +508,60 @@ export const getDailyStats = async () => {
     const data = await response.json();
     return data;
 }
+
+// ── Material CRUD ──────────────────────────────────────────────────────────
+
+export const getMaterials = async () => {
+    const response = await fetch(`${baseUrl}/admin/material/`, {
+        method: 'GET',
+        headers: headers()
+    });
+    if (!response.ok) {
+        Toast.fire({
+            icon: 'error',
+            iconColor: '#f43f5e',
+            title: 'Failed get materials',
+            background: '#fff1f2',
+            color: '#9f1239'
+        });
+        return [];
+    }
+    const data = await response.json();
+    return data;
+}
+
+export const addMaterial = async (formData) => {
+    const response = await fetch(`${baseUrl}/admin/material/add`, {
+        method: 'POST',
+        body: JSON.stringify(formData),
+        headers: {
+            ...headers(),
+            'Content-Type': 'application/json'
+        }
+    });
+    return response;
+}
+
+export const updateMaterial = async (formData) => {
+    const response = await fetch(`${baseUrl}/admin/material/update`, {
+        method: 'PUT',
+        body: JSON.stringify(formData),
+        headers: {
+            ...headers(),
+            'Content-Type': 'application/json'
+        }
+    });
+    return response;
+}
+
+export const deleteMaterial = async (id) => {
+    const response = await fetch(`${baseUrl}/admin/material/delete`, {
+        method: 'DELETE',
+        body: JSON.stringify({ id }),
+        headers: {
+            ...headers(),
+            'Content-Type': 'application/json'
+        }
+    });
+    return response;
+}

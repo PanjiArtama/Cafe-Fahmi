@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Camera } from 'lucide-react';
+import { X, Camera, Plus, Trash2 } from 'lucide-react';
 import { addProduct, updateProduct } from '../../data/service';
 import Swal from 'sweetalert2';
 import { Toast } from '../../utils/Toast';
@@ -9,14 +9,14 @@ const EMPTY_FORM = {
   price: '',
   category: '',
   desc: '',
+  composition: [],
 };
 
-const AddProductSlideOver = ({ isOpen, onClose, categories, initialData = null }) => {
+const AddProductSlideOver = ({ isOpen, onClose, categories, materials = [], initialData = null }) => {
   const isEditMode = !!initialData;
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
-
 
   useEffect(() => {
     if (isOpen && initialData) {
@@ -26,11 +26,17 @@ const AddProductSlideOver = ({ isOpen, onClose, categories, initialData = null }
         price: initialData.price || '',
         category: initialData.category?._id || initialData.category || '',
         desc: initialData.desc || '',
+        composition: initialData.composition?.map(c => ({
+          materialId: c.materialId?._id || c.materialId || '',
+          quantity: c.quantity || ''
+        })) || [],
       });
-      setImagePreview(`http://localhost:5005${initialData.image}` || null);
+      setImagePreview(initialData.image ? `http://localhost:5005${initialData.image}` : null);
+      setIsCustom(false);
     } else if (isOpen && !initialData) {
       setFormData(EMPTY_FORM);
       setImagePreview(null);
+      setIsCustom(false);
     }
   }, [isOpen, initialData]);
 
@@ -44,24 +50,50 @@ const AddProductSlideOver = ({ isOpen, onClose, categories, initialData = null }
     if (file) setImagePreview(URL.createObjectURL(file));
   };
 
+  const [isCustom, setIsCustom] = useState(false);
+
   const handleClose = () => {
     setFormData(EMPTY_FORM);
     setImagePreview(null);
+    setIsCustom(false);
     onClose();
   };
-  const [isCustom, setIsCustom] = useState(false);
+
   const handleCategoryChange = (e) => {
     const { value } = e.target;
 
     if (value === "other") {
       setIsCustom(true);
-      // Clear the category so the user can type a fresh one
       setFormData(prev => ({ ...prev, category: "" }));
     } else {
       setIsCustom(false);
       setFormData(prev => ({ ...prev, category: value }));
     }
   };
+
+  // --- Composition Handlers ---
+  const handleAddComposition = () => {
+    setFormData(prev => ({
+      ...prev,
+      composition: [...prev.composition, { materialId: '', quantity: '' }]
+    }));
+  };
+
+  const handleRemoveComposition = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      composition: prev.composition.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleCompositionChange = (index, field, value) => {
+    setFormData(prev => {
+      const newComp = [...prev.composition];
+      newComp[index] = { ...newComp[index], [field]: value };
+      return { ...prev, composition: newComp };
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const data = new FormData();
@@ -69,6 +101,14 @@ const AddProductSlideOver = ({ isOpen, onClose, categories, initialData = null }
     data.append('price', formData.price);
     data.append('category', formData.category);
     data.append('desc', formData.desc);
+    
+    // Filter out invalid compositions before sending
+    const validComposition = formData.composition
+      .filter(c => c.materialId && c.quantity > 0)
+      .map(c => ({ materialId: c.materialId, quantity: Number(c.quantity) }));
+      
+    data.append('composition', JSON.stringify(validComposition));
+
     if (fileInputRef.current?.files[0]) {
       data.append('image', fileInputRef.current.files[0]);
     }
@@ -86,7 +126,6 @@ const AddProductSlideOver = ({ isOpen, onClose, categories, initialData = null }
           icon: 'success',
           iconColor: '#10b981',
           title: isEditMode ? 'Update Successful' : 'Product Added',
-
           background: '#ecfdf5',
           color: '#065f46'
         });
@@ -129,7 +168,7 @@ const AddProductSlideOver = ({ isOpen, onClose, categories, initialData = null }
             className="flex h-full flex-col bg-white shadow-2xl border-l border-[#E8DFD5]"
           >
             {/* Header */}
-            <div className="px-6 md:px-8 py-5 md:py-6 bg-[#FDFBF7] border-b border-[#E8DFD5] flex items-center justify-between">
+            <div className="px-6 md:px-8 py-5 md:py-6 bg-[#FDFBF7] border-b border-[#E8DFD5] flex items-center justify-between shrink-0">
               <div>
                 <h2 className="text-xl md:text-2xl font-serif font-bold text-[#4A3728]">
                   {isEditMode ? 'Edit Product' : 'Add New Product'}
@@ -246,7 +285,7 @@ const AddProductSlideOver = ({ isOpen, onClose, categories, initialData = null }
                           name="category"
                           placeholder="Enter new category name"
                           value={formData.category}
-                          onChange={handleInputChange} // Uses your original handler
+                          onChange={handleInputChange}
                           autoFocus
                           className="w-full bg-[#FDFBF7] border border-[#E8DFD5] rounded-2xl py-3 px-5 focus:ring-2 focus:ring-[#D9C5B2] outline-none"
                         />
@@ -263,8 +302,85 @@ const AddProductSlideOver = ({ isOpen, onClose, categories, initialData = null }
                 </div>
               </div>
 
+              {/* Composition Section */}
+              <div className="pt-4 border-t border-[#E8DFD5]">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#4A3728]">Komposisi Bahan Baku</h3>
+                    <p className="text-[10px] text-[#8C6A53] uppercase tracking-widest mt-1">Opsional - Untuk pengurangan stok otomatis</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddComposition}
+                    className="flex items-center gap-1 text-xs font-bold text-[#8C6A53] hover:text-[#4A3728] bg-[#F5EFE6] px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <Plus size={14} /> Tambah Bahan
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {formData.composition.length === 0 && (
+                    <div className="text-center py-6 bg-[#FDFBF7] border border-dashed border-[#E8DFD5] rounded-xl text-[#8C6A53] text-xs">
+                      Tidak ada bahan baku yang dipilih.
+                    </div>
+                  )}
+                  {formData.composition.map((comp, index) => {
+                    const selectedMaterial = materials.find(m => m._id === comp.materialId);
+                    const unit = selectedMaterial ? selectedMaterial.unit : '';
+
+                    return (
+                      <div key={index} className="flex items-start gap-3 bg-[#FDFBF7] p-3 rounded-xl border border-[#E8DFD5]">
+                        <div className="flex-1">
+                          <label className="block text-[9px] font-bold uppercase tracking-widest text-[#8C6A53] mb-1">Pilih Bahan</label>
+                          <select
+                            value={comp.materialId}
+                            onChange={(e) => handleCompositionChange(index, 'materialId', e.target.value)}
+                            className="w-full bg-white border border-[#E8DFD5] rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-[#D9C5B2] outline-none"
+                            required
+                          >
+                            <option value="">-- Pilih Bahan --</option>
+                            {materials.map(m => (
+                              <option key={m._id} value={m._id}>{m.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="w-24">
+                          <label className="block text-[9px] font-bold uppercase tracking-widest text-[#8C6A53] mb-1">Jumlah</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={comp.quantity}
+                              onChange={(e) => handleCompositionChange(index, 'quantity', e.target.value)}
+                              placeholder="0"
+                              className="w-full bg-white border border-[#E8DFD5] rounded-lg py-2 pl-3 pr-8 text-sm focus:ring-2 focus:ring-[#D9C5B2] outline-none"
+                              required
+                            />
+                            {unit && (
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#8C6A53] pointer-events-none">
+                                {unit}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="pt-5">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveComposition(index)}
+                            className="p-2 text-rose-400 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Description */}
-              <div>
+              <div className="pt-4 border-t border-[#E8DFD5]">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8C6A53] mb-2">
                   Product Story / Description
                 </label>
@@ -280,7 +396,7 @@ const AddProductSlideOver = ({ isOpen, onClose, categories, initialData = null }
             </div>
 
             {/* Footer */}
-            <div className="p-6 md:p-8 bg-[#FDFBF7] border-t border-[#E8DFD5] flex gap-4 mb-safe">
+            <div className="p-6 md:p-8 bg-[#FDFBF7] border-t border-[#E8DFD5] flex gap-4 shrink-0 mb-safe">
               <button
                 type="button"
                 onClick={handleClose}

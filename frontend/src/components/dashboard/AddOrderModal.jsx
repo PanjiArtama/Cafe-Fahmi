@@ -267,15 +267,32 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
                         <div className="flex-1 p-8 overflow-y-auto">
                             <label className="block text-[11px] font-bold uppercase tracking-widest text-[#8C6A53] mb-6 text-center italic">Signature Menu</label>
                             <div className="grid grid-cols-2 xl:grid-cols-3 gap-6">
-                                {productList.map(product => (
-                                    <button key={product._id} onClick={() => addToCart(product)} className="group flex flex-col justify-between p-6 bg-white border border-[#E8DFD5] rounded-4xl hover:border-[#4A3728] transition-all h-40">
-                                        <span className="font-serif font-bold text-[#4A3728] text-lg leading-tight">{product.name}</span>
-                                        <div className="flex justify-between items-end">
-                                            <span className="font-bold text-[#8C6A53]">Rp {product.price.toLocaleString()}</span>
-                                            <div className="p-2 bg-[#FDFBF7] border border-[#E8DFD5] rounded-2xl group-hover:bg-[#4A3728] group-hover:text-white transition-colors"><Plus size={20} /></div>
-                                        </div>
-                                    </button>
-                                ))}
+                                {productList.map(product => {
+                                    const isOutOfStock = product.isAvailable === false;
+                                    return (
+                                        <button 
+                                            key={product._id} 
+                                            onClick={() => addToCart(product)} 
+                                            disabled={isOutOfStock}
+                                            className={`group flex flex-col justify-between p-6 bg-white border border-[#E8DFD5] rounded-4xl transition-all h-40 ${isOutOfStock ? 'opacity-50 cursor-not-allowed bg-gray-50 grayscale' : 'hover:border-[#4A3728]'}`}
+                                        >
+                                            <span className="font-serif font-bold text-[#4A3728] text-lg leading-tight">
+                                                {product.name}
+                                            </span>
+                                            <div className="flex justify-between items-end w-full">
+                                                <div className="flex flex-col items-start">
+                                                    <span className="font-bold text-[#8C6A53]">Rp {product.price.toLocaleString()}</span>
+                                                    {isOutOfStock && <span className="text-[10px] font-bold text-red-500 uppercase">Habis</span>}
+                                                </div>
+                                                {!isOutOfStock && (
+                                                    <div className="p-2 bg-[#FDFBF7] border border-[#E8DFD5] rounded-2xl group-hover:bg-[#4A3728] group-hover:text-white transition-colors">
+                                                        <Plus size={20} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
