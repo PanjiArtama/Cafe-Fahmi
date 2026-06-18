@@ -15,6 +15,7 @@ import QRRoute from './routes/QRToken.js'
 import AdminCoupons from "./routes/admin/Coupon.js";
 import UserCoupon from "./routes/user/UserCoupon.js";
 import UserRoute from "./routes/user/UserRoute.js";
+import AdminMaterial from "./routes/admin/Material.js";
 import AdminWebInfo from "./routes/admin/WebInformation.js";
 import PublicWebInfo from "./routes/public/WebInformation.js";
 
@@ -42,6 +43,7 @@ app.use("/admin/cat", AdminCat)
 app.use("/admin/product", AdminProduct)
 app.use("/admin/user", AdminUser)
 app.use("/admin/order", AdminOrder)
+app.use("/admin/material", AdminMaterial)
 app.use("/admin/web-info", AdminWebInfo)
 
 //user Route

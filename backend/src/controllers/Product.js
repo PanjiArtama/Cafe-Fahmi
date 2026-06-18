@@ -1,14 +1,30 @@
 import Category from "../models/Category.js";
 import Product from "../models/Product.js";
+import Material from "../models/Material.js";
+
 const isValidObjectId = (id) => {
     const regex = /^[0-9a-fA-F]{24}$/;
     return regex.test(id);
 };
+
 export const GetProducts = async (req, res) => {
     try {
         const products = await Product.find({ status: true })
             .populate("category")
-        res.json(products);
+            .populate("composition.materialId");
+        const productsWithAvailability = products.map(product => {
+            const prod = product.toObject();
+            if (!prod.composition || prod.composition.length === 0) {
+                prod.isAvailable = true;
+            } else {
+                prod.isAvailable = prod.composition.every(comp => {
+                    const material = comp.materialId;
+                    return material && material.status && material.stock >= comp.quantity;
+                });
+            }
+            return prod;
+        });
+        res.json(productsWithAvailability);
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }

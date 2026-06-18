@@ -5,10 +5,10 @@ import { addCoupon, updateCoupon } from '../../data/service';
 
 const EMPTY_COUPON = {
   code: '',
-  type: 'fixed', // fixed or percentage
+  type: 'fixed', 
   value: '',
   minPurchase: '',
-  maxDiscount: '', // optional for percentage
+  maxDiscount: '', 
   expiresAt: '',
   isActive: true
 };
@@ -43,8 +43,8 @@ const CouponSlideOver = ({ isOpen, onClose, initialData = null }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // API integration logic goes here
-    // console.log("Submitting Coupon Data:", formData);
+    
+    
     var res;
     if(isEditMode){
       res = await updateCoupon(formData._id, formData);

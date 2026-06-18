@@ -1,5 +1,6 @@
 import { connectDB, resetDB } from "./utils/db.js";
 import SeedCategory from "./seeders/Category.seeder.js";
+import SeedMaterial from "./seeders/Material.seeder.js";
 import SeedProduct from "./seeders/Product.seeder.js";
 import SeedUser from "./seeders/User.seeder.js";
 import SeedOrder from "./seeders/Order.seeder.js";
@@ -13,7 +14,8 @@ const run = async () => {
 
         await resetDB();
         const cat = await SeedCategory();
-        const prod = await SeedProduct(cat);
+        const materials = await SeedMaterial();
+        const prod = await SeedProduct(cat, materials);
         const [users, admin] = await SeedUser();
         const coupons = await SeedCoupon();
         await SeedUserCoupon(users, coupons);

@@ -1,6 +1,7 @@
 import Order from "../models/Order.js";
 import OrderDetail from "../models/OrderDetail.js";
 import Product from "../models/Product.js";
+import Material from "../models/Material.js";
 import Coupon from "../models/Coupon.js";
 import UserCoupon from "../models/UserCoupon.js";
 import { generateOrdersExcel } from "../utils/excelGenerator.js";
@@ -11,15 +12,49 @@ export const createOrder = async (req, res) => {
         if (!items || items.length === 0 || (!userId && !guestName)) {
             return res.status(400).json({ message: "Invalid data" });
         }
+
+        // 1. Check material availability for all items before proceeding
+        for (const item of items) {
+            const product = await Product.findById(item.productId).populate("composition.materialId");
+
+            if (!product) {
+                return res.status(404).json({ message: "Product not found" });
+            }
+
+            if (product.composition && product.composition.length > 0) {
+                for (const comp of product.composition) {
+                    const material = comp.materialId;
+                    const requiredQty = comp.quantity * item.quantity;
+
+                    if (!material || !material.status || material.stock < requiredQty) {
+                        return res.status(400).json({
+                            message: `Product "${product.name}" is unavailable (insufficient material: ${material ? material.name : 'unknown'})`
+                        });
+                    }
+                }
+            }
+        }
+
+        // 2. Reduce material stock
+        for (const item of items) {
+            const product = await Product.findById(item.productId).populate("composition.materialId");
+
+            if (product.composition && product.composition.length > 0) {
+                for (const comp of product.composition) {
+                    const reduceQty = comp.quantity * item.quantity;
+                    await Material.findByIdAndUpdate(comp.materialId._id, {
+                        $inc: { stock: -reduceQty }
+                    });
+                }
+            }
+        }
+
+        // 3. Create order details and calculate subtotal
         let subtotalAmount = 0;
         const orderDetailIds = [];
 
         for (const item of items) {
             const product = await Product.findById(item.productId);
-
-            if (!product) {
-                return res.status(404).json({ message: "Product not found" });
-            }
 
             const subtotal = item.price * item.quantity;
             subtotalAmount += subtotal;
@@ -113,15 +148,34 @@ export const changeStatus = async (req, res) => {
             return res.status(400).json({ message: "Invalid status" });
         }
 
-        const order = await Order.findByIdAndUpdate(
-            id,
-            { status, orderDate: new Date() },
-            { new: true }
-        );
+        const order = await Order.findById(id).populate({
+            path: "orderDetails",
+            populate: { path: "productId" }
+        });
 
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
         }
+
+        // Restore material stock when cancelling an order
+        if (status === 'cancelled' && order.status !== 'cancelled') {
+            for (const detail of order.orderDetails) {
+                const product = await Product.findById(detail.productId._id).populate("composition.materialId");
+
+                if (product && product.composition && product.composition.length > 0) {
+                    for (const comp of product.composition) {
+                        const restoreQty = comp.quantity * detail.quantity;
+                        await Material.findByIdAndUpdate(comp.materialId._id, {
+                            $inc: { stock: restoreQty }
+                        });
+                    }
+                }
+            }
+        }
+
+        order.status = status;
+        order.orderDate = new Date();
+        await order.save();
 
         res.json(order);
 
