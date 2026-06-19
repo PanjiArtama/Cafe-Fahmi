@@ -49,8 +49,8 @@ export default function CompanyProfile() {
   };
 
   const handleRegisterAndClose = async (userData) => {
-    await handleRegister(userData);
     setShowAuthModal(false);
+    await handleRegister(userData);
   };
 
   return (

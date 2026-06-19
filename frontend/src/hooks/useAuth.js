@@ -93,11 +93,11 @@ export default function useAuth() {
       const data = await response.json();
 
       if (response.ok) {
-        Swal.fire({
+        const result = await Swal.fire({
           icon: "success",
           iconColor: "#8C6A53",
           title: '<span style="font-family: serif; font-weight: bold; color: #4A3728;">Login Berhasil</span>',
-          text: "Anda telah berhasil mendaftar. Silakan masuk untuk melanjutkan.",
+          text: "Anda telah berhasil mendaftar.",
           background: SWAL_BACKGROUND,
           confirmButtonColor: SWAL_CONFIRM_COLOR,
           confirmButtonText: "LANJUTKAN",
@@ -114,6 +114,9 @@ export default function useAuth() {
             popup: 'animate__animated animate__fadeInUp animate__faster'
           }
         });
+        if (result.isConfirmed) {
+          handleLogin({ email: userData.email, password: userData.password });
+        }
       } else if (data.message == "User already exists") {
         Swal.fire({
           icon: "warning",
@@ -148,8 +151,6 @@ export default function useAuth() {
             title: 'text-2xl',
             htmlContainer: 'text-[#8C6A53] font-medium'
           },
-
-
           showClass: {
             popup: 'animate__animated animate__headShake'
           }
@@ -195,16 +196,16 @@ export default function useAuth() {
       title: 'Keluar Aplikasi?',
       text: 'Anda akan mengakhiri sesi ini dan harus login kembali untuk masuk.',
       icon: 'warning',
-      iconColor: '#c59b27',          
+      iconColor: '#c59b27',
       showCancelButton: true,
-      confirmButtonColor: '#5c4033', 
-      cancelButtonColor: '#b89047',  
+      confirmButtonColor: '#5c4033',
+      cancelButtonColor: '#b89047',
       confirmButtonText: 'Ya, Keluar',
       cancelButtonText: 'Batal',
-      background: '#fdfbf7',         
-      color: '#3e2723',              
+      background: '#fdfbf7',
+      color: '#3e2723',
       customClass: {
-        popup: 'rounded-xl border border-[#e7e0d4]', 
+        popup: 'rounded-xl border border-[#e7e0d4]',
       }
     });
     if (result.isConfirmed) {
