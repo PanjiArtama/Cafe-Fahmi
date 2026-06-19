@@ -9,10 +9,12 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
     const [selectedUser, setSelectedUser] = useState(null);
     const [guestName, setGuestName] = useState("");
     const [userSearch, setUserSearch] = useState("");
+    const [menuSearch, setMenuSearch] = useState(""); // State for menu search
     const [isScanning, setIsScanning] = useState(false);
     const [selectedCoupon, setSelectedCoupon] = useState(null);
     const [coupons, setCoupons] = useState([]);
     const [cart, setCart] = useState([]);
+
     useEffect(() => {
         const fetchCoupons = async () => {
             const c = await getAvailableCouponsByUser(selectedUser._id);
@@ -22,6 +24,7 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
             fetchCoupons();
         }
     }, [selectedUser]);
+
     const processOrder = async () => {
         var orderData = {
             userId: selectedUser ? selectedUser._id : null,
@@ -37,7 +40,6 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
                     icon: 'success',
                     iconColor: '#10b981',
                     title: 'Order Processed',
-
                     background: '#ecfdf5',
                     color: '#065f46'
                 });
@@ -60,9 +62,7 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
             console.error("Error creating order:", err);
             alert("An error occurred while processing the order.");
         }
-
     }
-
 
     const clearState = () => {
         setIsGuest(false);
@@ -70,6 +70,7 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
         setGuestName("");
         setCart([]);
         setUserSearch("");
+        setMenuSearch(""); // Clear menu search
         setIsScanning(false);
     };
 
@@ -127,6 +128,14 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
         );
     }, [userSearch, userList, selectedUser]);
 
+    // Filtered menu/product list
+    const filteredProducts = useMemo(() => {
+        if (!menuSearch) return productList;
+        return productList.filter(product =>
+            product.name.toLowerCase().includes(menuSearch.toLowerCase())
+        );
+    }, [menuSearch, productList]);
+
     // QR Scanner Logic
     useEffect(() => {
         let scanner = null;
@@ -136,7 +145,6 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
                 { facingMode: "environment" },
                 { fps: 10, qrbox: { width: 350, height: 350 } },
                 async (decodedText) => {
-                    // Assuming QR contains User ID
                     const data = await getDataFromQR(decodedText);
                     const user = userList.find(u => u._id == data.user._id);
                     if (user) {
@@ -154,6 +162,7 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
             }
         };
     }, [isScanning, userList, isGuest]);
+
     useEffect(() => {
         setSelectedCoupon(null);
     }, [isGuest, selectedUser]);
@@ -185,6 +194,7 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
     }, [selectedCoupon, subtotal]);
 
     const total = Math.max(0, subtotal - discountCalculation.amount);
+
     const addToCart = (product) => {
         if (getAvailableStockForProduct(product) <= 0) return;
 
@@ -196,6 +206,7 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
             setCart([...cart, { productId: product._id, name: product.name, price: product.price, quantity: 1 }]);
         }
     };
+
     if (!isOpen) return null;
 
     return (
@@ -300,41 +311,72 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
                             )}
                         </div>
 
-                        {/* Menu Grid */}
-                        <div className="flex-1 p-8 overflow-y-auto">
-                            <label className="block text-[11px] font-bold uppercase tracking-widest text-[#8C6A53] mb-6 text-center italic">Signature Menu</label>
-                            <div className="grid grid-cols-2 xl:grid-cols-3 gap-6">
-                                {productList.map(product => {
-                                    const availableStock = getAvailableStockForProduct(product);
-                                    const isOutOfStock = product.isAvailable === false || availableStock <= 0;
-                                    return (
+                        {/* Menu Section with Search */}
+                        <div className="flex-1 p-8 overflow-y-auto flex flex-col">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                                <label className="text-[11px] font-bold uppercase tracking-widest text-[#8C6A53] italic">Signature Menu</label>
+                                
+                                {/* Menu Search Bar */}
+                                <div className="relative w-full md:w-72">
+                                    <Search className="absolute left-4 top-3 text-[#C9B8AA]" size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search menu item..."
+                                        className="w-full pl-11 pr-4 py-2 text-sm bg-white border border-[#E8DFD5] rounded-xl outline-none focus:border-[#4A3728] text-[#4A3728] transition-colors"
+                                        value={menuSearch}
+                                        onChange={(e) => setMenuSearch(e.target.value)}
+                                    />
+                                    {menuSearch && (
                                         <button 
-                                            key={product._id} 
-                                            onClick={() => addToCart(product)} 
-                                            disabled={isOutOfStock}
-                                            className={`group flex flex-col justify-between p-6 bg-white border border-[#E8DFD5] rounded-4xl transition-all h-40 ${isOutOfStock ? 'opacity-50 cursor-not-allowed bg-gray-50 grayscale' : 'hover:border-[#4A3728]'}`}
+                                            onClick={() => setMenuSearch("")}
+                                            className="absolute right-3 top-3 text-[#C9B8AA] hover:text-[#4A3728]"
                                         >
-                                            <span className="font-serif font-bold text-[#4A3728] text-lg leading-tight">
-                                                {product.name}
-                                            </span>
-                                            <div className="flex justify-between items-end w-full">
-                                                <div className="flex flex-col items-start">
-                                                    <span className="font-bold text-[#8C6A53]">Rp {product.price.toLocaleString()}</span>
-                                                    {product.isAvailable !== false && availableStock !== Infinity && (
-                                                        <span className="text-[10px] font-bold text-[#D9C5B2] uppercase mt-1">Stok: {availableStock}</span>
-                                                    )}
-                                                    {isOutOfStock && <span className="text-[10px] font-bold text-red-500 uppercase">Habis</span>}
-                                                </div>
-                                                {!isOutOfStock && (
-                                                    <div className="p-2 bg-[#FDFBF7] border border-[#E8DFD5] rounded-2xl group-hover:bg-[#4A3728] group-hover:text-white transition-colors">
-                                                        <Plus size={20} />
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <X size={14} />
                                         </button>
-                                    );
-                                })}
+                                    )}
+                                </div>
                             </div>
+
+                            {/* Menu Grid */}
+                            {filteredProducts.length > 0 ? (
+                                <div className="grid grid-cols-2 xl:grid-cols-3 gap-6">
+                                    {filteredProducts.map(product => {
+                                        const availableStock = getAvailableStockForProduct(product);
+                                        const isOutOfStock = product.isAvailable === false || availableStock <= 0;
+                                        return (
+                                            <button 
+                                                key={product._id} 
+                                                onClick={() => addToCart(product)} 
+                                                disabled={isOutOfStock}
+                                                className={`group flex flex-col justify-between p-6 bg-white border border-[#E8DFD5] rounded-4xl transition-all h-40 ${isOutOfStock ? 'opacity-50 cursor-not-allowed bg-gray-50 grayscale' : 'hover:border-[#4A3728]'}`}
+                                            >
+                                                <span className="font-serif font-bold text-[#4A3728] text-lg leading-tight">
+                                                    {product.name}
+                                                </span>
+                                                <div className="flex justify-between items-end w-full">
+                                                    <div className="flex flex-col items-start">
+                                                        <span className="font-bold text-[#8C6A53]">Rp {product.price.toLocaleString()}</span>
+                                                        {product.isAvailable !== false && availableStock !== Infinity && (
+                                                            <span className="text-[10px] font-bold text-[#D9C5B2] uppercase mt-1">Stok: {availableStock}</span>
+                                                        )}
+                                                        {isOutOfStock && <span className="text-[10px] font-bold text-red-500 uppercase">Habis</span>}
+                                                    </div>
+                                                    {!isOutOfStock && (
+                                                        <div className="p-2 bg-[#FDFBF7] border border-[#E8DFD5] rounded-2xl group-hover:bg-[#4A3728] group-hover:text-white transition-colors">
+                                                            <Plus size={20} />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center text-[#8C6A53] py-12">
+                                    <Coffee size={40} className="stroke-1 opacity-60 mb-2 animate-pulse" />
+                                    <p className="text-sm font-medium">No menu items match "{menuSearch}"</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -366,7 +408,7 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
 
                         <div className="p-8 bg-[#FDFBF7] border-t border-[#E8DFD5] space-y-6">
                             {/* COUPON SECTION */}
-                            <div className="p-8 pb-0">
+                            <div>
                                 <label className="text-[11px] font-bold uppercase tracking-widest text-[#8C6A53] mb-3 block">
                                     Apply Coupon
                                 </label>
@@ -394,27 +436,24 @@ const NewOrderModal = ({ isOpen, onClose, productList, userList, onRefresh }) =>
                                 {discountCalculation.error && <p className="text-[10px] text-red-500 mt-1 italic">{discountCalculation.error}</p>}
                             </div>
 
-                            {/* UPDATED TOTAL SECTION */}
-                            <div className="p-8 bg-[#FDFBF7] border-t border-[#E8DFD5] space-y-4">
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center text-sm text-[#8C6A53]">
-                                        <span>Subtotal</span>
-                                        <span>Rp {subtotal.toLocaleString()}</span>
-                                    </div>
-                                    {discountCalculation.amount > 0 && (
-                                        <div className="flex justify-between text-sm text-green-600">
-                                            <span>Discount</span>
-                                            <span>- Rp {discountCalculation.amount.toLocaleString()}</span>
-                                        </div>
-                                    )}
-                                    <div className="flex justify-between items-center pt-2 border-t border-[#E8DFD5]">
-                                        <span className="font-serif font-bold text-[#4A3728] text-xl">Total</span>
-                                        <span className="font-serif font-bold text-[#4A3728] text-3xl">Rp {total.toLocaleString()}</span>
-                                    </div>
+                            {/* TOTAL SECTION */}
+                            <div className="pt-4 border-t border-[#E8DFD5] space-y-2">
+                                <div className="flex justify-between items-center text-sm text-[#8C6A53]">
+                                    <span>Subtotal</span>
+                                    <span>Rp {subtotal.toLocaleString()}</span>
                                 </div>
-
-
+                                {discountCalculation.amount > 0 && (
+                                    <div className="flex justify-between text-sm text-green-600">
+                                        <span>Discount</span>
+                                        <span>- Rp {discountCalculation.amount.toLocaleString()}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between items-center pt-2 border-t border-[#E8DFD5]">
+                                    <span className="font-serif font-bold text-[#4A3728] text-xl">Total</span>
+                                    <span className="font-serif font-bold text-[#4A3728] text-3xl">Rp {total.toLocaleString()}</span>
+                                </div>
                             </div>
+
                             <button onClick={processOrder} disabled={cart.length === 0 || (!isGuest && !selectedUser) || (isGuest && guestName == "")} className="w-full bg-[#4A3728] text-white py-5 rounded-2xl font-bold uppercase text-xs tracking-[0.2em] shadow-xl hover:bg-[#382a1f] transition-all disabled:opacity-30">
                                 Process Order
                             </button>

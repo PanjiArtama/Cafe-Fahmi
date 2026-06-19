@@ -20,7 +20,6 @@ const UserCoupon = new mongoose.Schema({
     assignedAt: { type: Date, default: Date.now }
 });
 
-// 🔥 Prevent duplicate assignment (VERY IMPORTANT)
-// UserCoupon.index({ userId: 1, couponId: 1 }, { unique: true });
+UserCoupon.index({ userId: 1, couponId: 1 }, { unique: true });
 
 export default mongoose.model('UserCoupon', UserCoupon);

@@ -168,7 +168,7 @@ const FrontPage = ({ orders = [], onViewAll }) => {
                             <p className="text-[10px] text-[#8C6A53] uppercase tracking-[0.2em] font-bold mt-1">Revenue over time</p>
                         </div>
                     </div>
-                    <div className="h-[300px] w-full">
+                    <div className="h-75 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={salesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <defs>
