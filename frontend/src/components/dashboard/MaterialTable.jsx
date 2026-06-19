@@ -65,24 +65,28 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
       ),
     },
     {
-      header: 'Aksi',
+      header: 'Actions',
       id: 'actions',
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex items-center justify-center gap-1.5">
           <button
             onClick={() => onEdit(row.original)}
-            className="p-2 hover:bg-[#F5EFE6] rounded-md text-[#D9C5B2] hover:text-[#4A3728] transition-all border border-transparent hover:border-[#D9C5B2]"
-            title="Edit Material"
+            className="w-8 h-8 rounded-full bg-transparent text-[#8D7B6E] 
+                       flex items-center justify-center transition-colors duration-200
+                       hover:bg-[#B58950]/10 hover:text-[#4A3728]"
+            title="Edit Product"
           >
-            <Edit2 size={16} />
+            <Edit2 size={13} strokeWidth={2.5} />
           </button>
           <button
             onClick={() => onDelete?.(row.original)}
-            className="p-2 hover:bg-rose-50 rounded-md text-[#D9C5B2] hover:text-rose-500 transition-all"
-            title="Hapus Material"
+            className="w-8 h-8 rounded-full bg-transparent text-[#8D7B6E] 
+                       flex items-center justify-center transition-colors duration-200
+                       hover:bg-rose-50 hover:text-rose-600"
+            title="Delete Product"
           >
-            <Trash2 size={16} />
+            <Trash2 size={13} strokeWidth={2.5} />
           </button>
         </div>
       ),
@@ -141,10 +145,12 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
             <thead className="bg-[#FDFBF7] border-b border-[#F5EFE6]">
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
+                  {headerGroup.headers.map(header => {
+                    const isCentered = header.id !== 'name';
+                    return (
                     <th key={header.id} className="px-6 py-4 text-[#8C6A53] text-[10px] uppercase tracking-widest font-bold">
                       <div
-                        className={`flex items-center gap-2 ${header.column.getCanSort() ? 'cursor-pointer select-none hover:text-[#4A3728]' : ''}`}
+                        className={`flex items-center gap-2 ${isCentered ? 'justify-center' : 'justify-start'} ${header.column.getCanSort() ? 'cursor-pointer select-none hover:text-[#4A3728]' : ''}`}
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
@@ -158,7 +164,7 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
                         )}
                       </div>
                     </th>
-                  ))}
+                  )})}
                 </tr>
               ))}
             </thead>

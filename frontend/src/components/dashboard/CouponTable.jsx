@@ -40,7 +40,7 @@ const CouponTable = ({ data, onEdit, onDelete }) => {
       cell: ({ row }) => {
         const { type, value } = row.original;
         return (
-          <span className="font-bold text-[#4A3728]">
+          <span className="font-serif font-bold text-[#4A3728]">
             {type === 'fixed' ? `Rp ${value.toLocaleString()}` : `${value}%`}
           </span>
         );
@@ -50,9 +50,7 @@ const CouponTable = ({ data, onEdit, onDelete }) => {
       header: 'Min. Purchase',
       accessorKey: 'minPurchase',
       cell: ({ getValue }) => (
-        <span className="text-[#8C6A53] text-sm">
-          {getValue()? `Rp ${getValue().toLocaleString()}` : 'No minimum'}
-        </span>
+        <span className="font-serif font-bold text-[#4A3728]">{getValue() ? `Rp ${getValue().toLocaleString()}` : 'No Minimum'}</span>
       ),
     },
     {
@@ -73,8 +71,8 @@ const CouponTable = ({ data, onEdit, onDelete }) => {
 
         return (
           <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${isActive
-              ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-              : 'bg-gray-50 text-gray-400 border-gray-200'
+            ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+            : 'bg-gray-50 text-gray-400 border-gray-200'
             }`}>
             {isActive ? "ACTIVE" : "INACTIVE"}
           </span>
@@ -86,19 +84,24 @@ const CouponTable = ({ data, onEdit, onDelete }) => {
       id: 'actions',
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="flex justify-end gap-2">
-          {/* Edit Button */}
+        <div className="flex items-center justify-center gap-1.5">
           <button
             onClick={() => onEdit(row.original)}
-            className="p-2 hover:bg-[#F5EFE6] rounded-md text-[#D9C5B2] hover:text-[#4A3728] transition-all border border-transparent hover:border-[#D9C5B2]"
-            title="Edit Coupon"
+            className="w-8 h-8 rounded-full bg-transparent text-[#8D7B6E] 
+                               flex items-center justify-center transition-colors duration-200
+                               hover:bg-[#B58950]/10 hover:text-[#4A3728]"
+            title="Edit Product"
           >
-            <Edit2 size={16} />
+            <Edit2 size={13} strokeWidth={2.5} />
           </button>
-
-          {/* Toggle Status Button */}
-          <button onClick={() => onDelete?.(row.original)} className="p-2 hover:bg-rose-50 rounded-md text-[#D9C5B2] hover:text-rose-500 transition-all">
-            <Trash2 size={16} />
+          <button
+            onClick={() => onDelete?.(row.original)}
+            className="w-8 h-8 rounded-full bg-transparent text-[#8D7B6E] 
+                               flex items-center justify-center transition-colors duration-200
+                               hover:bg-rose-50 hover:text-rose-600"
+            title="Delete Product"
+          >
+            <Trash2 size={13} strokeWidth={2.5} />
           </button>
         </div>
       ),
@@ -140,24 +143,27 @@ const CouponTable = ({ data, onEdit, onDelete }) => {
             <thead className="bg-[#FDFBF7] border-b border-[#F5EFE6]">
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th key={header.id} className="px-6 py-4 text-[#8C6A53] text-[10px] uppercase tracking-widest font-bold">
-                      <div
-                        className={`flex items-center gap-2 ${header.column.getCanSort() ? 'cursor-pointer select-none hover:text-[#4A3728]' : ''}`}
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        {header.column.getCanSort() && (
-                          <div className="w-4">
-                            {{
-                              asc: <ArrowUp size={12} />,
-                              desc: <ArrowDown size={12} />,
-                            }[header.column.getIsSorted()] ?? <ArrowUpDown size={12} className="opacity-30" />}
-                          </div>
-                        )}
-                      </div>
-                    </th>
-                  ))}
+                  {headerGroup.headers.map(header => {
+                    const isCentered = header.id !== 'code';
+                    return (
+                      <th key={header.id} className="px-6 py-4 text-[#8C6A53] text-[10px] uppercase tracking-widest font-bold">
+                        <div
+                          className={`flex items-center ${isCentered ? 'justify-center' : 'justify-start'} gap-2 ${header.column.getCanSort() ? 'cursor-pointer select-none hover:text-[#4A3728]' : ''}`}
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {header.column.getCanSort() && (
+                            <div className="w-4">
+                              {{
+                                asc: <ArrowUp size={12} />,
+                                desc: <ArrowDown size={12} />,
+                              }[header.column.getIsSorted()] ?? <ArrowUpDown size={12} className="opacity-30" />}
+                            </div>
+                          )}
+                        </div>
+                      </th>
+                    )
+                  })}
                 </tr>
               ))}
             </thead>
