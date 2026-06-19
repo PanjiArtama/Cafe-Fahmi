@@ -269,7 +269,7 @@ const Dashboard = () => {
       Toast.fire({
         icon: 'success',
         iconColor: '#10b981',
-        title: 'Bahan Dihapus',
+        title: 'Material Deleted',
         background: '#ecfdf5',
         color: '#065f46'
       });
@@ -278,7 +278,7 @@ const Dashboard = () => {
       Toast.fire({
         icon: 'error',
         iconColor: '#f43f5e',
-        title: 'Gagal Menghapus',
+        title: 'Failed to Delete',
         background: '#fff1f2',
         color: '#9f1239'
       });
@@ -411,7 +411,7 @@ const Dashboard = () => {
                   onClick={openAddMaterial}
                   className="flex items-center gap-2 bg-[#8C6A53] hover:bg-[#725541] text-white px-6 md:px-8 py-3 rounded-2xl font-bold transition-all transform hover:-translate-y-1 shadow-lg shadow-[#8C6A53]/20"
                 >
-                  <Plus size={20} /> Tambah Bahan
+                  <Plus size={20} /> Add Material
                 </button>
               </div>
               <MaterialTable data={materials} onEdit={openEditMaterial} onDelete={onDeleteMaterial} />

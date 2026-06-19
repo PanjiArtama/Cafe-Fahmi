@@ -22,7 +22,7 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
 
   const columns = useMemo(() => [
     {
-      header: 'Nama Bahan',
+      header: 'Material Name',
       accessorKey: 'name',
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
@@ -34,7 +34,7 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
       ),
     },
     {
-      header: 'Stok',
+      header: 'Stock',
       accessorKey: 'stock',
       sortingFn: 'basic',
       cell: ({ row }) => {
@@ -48,7 +48,7 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
             <span className="text-xs text-[#8C6A53]">{row.original.unit}</span>
             {isLow && (
               <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-500 border border-rose-100">
-                RENDAH
+                LOW
               </span>
             )}
           </div>
@@ -56,7 +56,7 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
       },
     },
     {
-      header: 'Satuan',
+      header: 'Unit',
       accessorKey: 'unit',
       cell: ({ getValue }) => (
         <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-[#F5EFE6] text-[#8C6A53] border border-[#E8DFD5] uppercase tracking-wider">
@@ -75,7 +75,7 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
             className="w-8 h-8 rounded-full bg-transparent text-[#8D7B6E] 
                        flex items-center justify-center transition-colors duration-200
                        hover:bg-[#B58950]/10 hover:text-[#4A3728]"
-            title="Edit Product"
+            title="Edit Material"
           >
             <Edit2 size={13} strokeWidth={2.5} />
           </button>
@@ -84,7 +84,7 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
             className="w-8 h-8 rounded-full bg-transparent text-[#8D7B6E] 
                        flex items-center justify-center transition-colors duration-200
                        hover:bg-rose-50 hover:text-rose-600"
-            title="Delete Product"
+            title="Delete Material"
           >
             <Trash2 size={13} strokeWidth={2.5} />
           </button>
@@ -120,7 +120,7 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
           <input
             value={globalFilter ?? ''}
             onChange={e => setGlobalFilter(e.target.value)}
-            placeholder="Cari bahan baku..."
+            placeholder="Search materials..."
             className="w-full pl-10 pr-4 py-2 bg-[#FDFBF7] border border-[#F5EFE6] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D9C5B2]/20 text-[#4A3728]"
           />
         </div>
@@ -130,9 +130,9 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
             value={unitFilter}
             onChange={e => setUnitFilter(e.target.value)}
           >
-            <option value="">Semua Satuan</option>
+            <option value="">All Units</option>
             <option value="gram">Gram</option>
-            <option value="ml">Mililiter (ml)</option>
+            <option value="ml">Milliliter (ml)</option>
             <option value="pcs">Pcs</option>
           </select>
         </div>
@@ -172,7 +172,7 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
               {table.getRowModel().rows.length === 0 ? (
                 <tr>
                   <td colSpan={columns.length} className="px-6 py-10 text-center text-[#8C6A53]">
-                    Tidak ada bahan baku ditemukan.
+                    No materials found.
                   </td>
                 </tr>
               ) : (
@@ -194,7 +194,7 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
         <div className="px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-t border-[#F5EFE6] bg-[#FDFBF7]/50">
           <div className="flex items-center gap-4">
             <p className="text-sm text-[#8C6A53]">
-              Menampilkan <strong>{table.getRowModel().rows.length}</strong> hasil
+              Showing <strong>{table.getRowModel().rows.length}</strong> results
             </p>
             <div className="flex items-center gap-2">
               <span className="text-xs text-[#8C6A53] font-medium uppercase">Show:</span>
@@ -212,7 +212,7 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
 
           <div className="flex items-center gap-4">
             <span className="text-sm text-[#8C6A53]">
-              Halaman <strong>{table.getState().pagination.pageIndex + 1}</strong> dari{' '}
+              Page <strong>{table.getState().pagination.pageIndex + 1}</strong> of{' '}
               {table.getPageCount()}
             </span>
             <div className="flex gap-2">

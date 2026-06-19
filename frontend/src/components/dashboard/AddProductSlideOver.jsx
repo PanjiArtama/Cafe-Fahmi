@@ -306,22 +306,22 @@ const AddProductSlideOver = ({ isOpen, onClose, categories, materials = [], init
               <div className="pt-4 border-t border-[#E8DFD5]">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-sm font-bold text-[#4A3728]">Komposisi Bahan Baku</h3>
-                    <p className="text-[10px] text-[#8C6A53] uppercase tracking-widest mt-1">Opsional - Untuk pengurangan stok otomatis</p>
+                    <h3 className="text-sm font-bold text-[#4A3728]">Raw Material Composition</h3>
+                    <p className="text-[10px] text-[#8C6A53] uppercase tracking-widest mt-1">Optional - For automatic stock reduction</p>
                   </div>
                   <button
                     type="button"
                     onClick={handleAddComposition}
                     className="flex items-center gap-1 text-xs font-bold text-[#8C6A53] hover:text-[#4A3728] bg-[#F5EFE6] px-3 py-1.5 rounded-lg transition-colors"
                   >
-                    <Plus size={14} /> Tambah Bahan
+                    <Plus size={14} /> Add Material
                   </button>
                 </div>
 
                 <div className="space-y-3">
                   {formData.composition.length === 0 && (
                     <div className="text-center py-6 bg-[#FDFBF7] border border-dashed border-[#E8DFD5] rounded-xl text-[#8C6A53] text-xs">
-                      Tidak ada bahan baku yang dipilih.
+                      No raw materials selected.
                     </div>
                   )}
                   {formData.composition.map((comp, index) => {
@@ -331,21 +331,21 @@ const AddProductSlideOver = ({ isOpen, onClose, categories, materials = [], init
                     return (
                       <div key={index} className="flex items-start gap-3 bg-[#FDFBF7] p-3 rounded-xl border border-[#E8DFD5]">
                         <div className="flex-1">
-                          <label className="block text-[9px] font-bold uppercase tracking-widest text-[#8C6A53] mb-1">Pilih Bahan</label>
+                          <label className="block text-[9px] font-bold uppercase tracking-widest text-[#8C6A53] mb-1">Select Material</label>
                           <select
                             value={comp.materialId}
                             onChange={(e) => handleCompositionChange(index, 'materialId', e.target.value)}
                             className="w-full bg-white border border-[#E8DFD5] rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-[#D9C5B2] outline-none"
                             required
                           >
-                            <option value="">-- Pilih Bahan --</option>
+                            <option value="">-- Select Material --</option>
                             {materials.map(m => (
                               <option key={m._id} value={m._id}>{m.name}</option>
                             ))}
                           </select>
                         </div>
                         <div className="w-24">
-                          <label className="block text-[9px] font-bold uppercase tracking-widest text-[#8C6A53] mb-1">Jumlah</label>
+                          <label className="block text-[9px] font-bold uppercase tracking-widest text-[#8C6A53] mb-1">Quantity</label>
                           <div className="relative">
                             <input
                               type="number"

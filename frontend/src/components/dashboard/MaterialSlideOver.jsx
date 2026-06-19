@@ -57,7 +57,7 @@ const MaterialSlideOver = ({ isOpen, onClose, initialData = null }) => {
         Toast.fire({
           icon: 'success',
           iconColor: '#10b981',
-          title: isEditMode ? 'Bahan Diperbarui' : 'Bahan Ditambahkan',
+          title: isEditMode ? 'Material Updated' : 'Material Added',
           background: '#ecfdf5',
           color: '#065f46'
         });
@@ -67,7 +67,7 @@ const MaterialSlideOver = ({ isOpen, onClose, initialData = null }) => {
         Toast.fire({
           icon: 'error',
           iconColor: '#f43f5e',
-          title: data.message || 'Gagal menyimpan',
+          title: data.message || 'Failed to save',
           background: '#fff1f2',
           color: '#9f1239'
         });
@@ -76,8 +76,8 @@ const MaterialSlideOver = ({ isOpen, onClose, initialData = null }) => {
       Toast.fire({
         icon: 'error',
         iconColor: '#f43f5e',
-        title: 'Koneksi Gagal',
-        text: 'Server tidak dapat dijangkau.'
+        title: 'Connection Failed',
+        text: 'Server cannot be reached.'
       });
     }
   };
@@ -103,10 +103,10 @@ const MaterialSlideOver = ({ isOpen, onClose, initialData = null }) => {
             <div className="px-6 md:px-8 py-5 md:py-6 bg-[#FDFBF7] border-b border-[#E8DFD5] flex items-center justify-between">
               <div>
                 <h2 className="text-xl md:text-2xl font-serif font-bold text-[#4A3728]">
-                  {isEditMode ? 'Edit Bahan Baku' : 'Tambah Bahan Baku'}
+                  {isEditMode ? 'Edit Raw Material' : 'Add Raw Material'}
                 </h2>
                 <p className="text-xs text-[#8C6A53] font-medium uppercase tracking-widest mt-1">
-                  Manajemen Material
+                  Material Management
                 </p>
               </div>
               <button
@@ -123,14 +123,14 @@ const MaterialSlideOver = ({ isOpen, onClose, initialData = null }) => {
               {/* Name */}
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8C6A53] mb-2">
-                  Nama Bahan
+                  Material Name
                 </label>
                 <input
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
                   type="text"
-                  placeholder="cth. Biji Kopi Arabika"
+                  placeholder="e.g. Arabica Coffee Beans"
                   className="w-full bg-[#FDFBF7] border border-[#E8DFD5] rounded-2xl py-3 px-5 focus:ring-2 focus:ring-[#D9C5B2] outline-none text-[#4A3728] font-medium"
                   required
                 />
@@ -140,7 +140,7 @@ const MaterialSlideOver = ({ isOpen, onClose, initialData = null }) => {
               <div className="grid grid-cols-2 gap-4 md:gap-6">
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8C6A53] mb-2">
-                    Jumlah Stok
+                    Stock Quantity
                   </label>
                   <input
                     name="stock"
@@ -155,7 +155,7 @@ const MaterialSlideOver = ({ isOpen, onClose, initialData = null }) => {
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8C6A53] mb-2">
-                    Satuan
+                    Unit
                   </label>
                   <select
                     name="unit"
@@ -164,8 +164,8 @@ const MaterialSlideOver = ({ isOpen, onClose, initialData = null }) => {
                     className="w-full bg-[#FDFBF7] border border-[#E8DFD5] rounded-2xl py-3 px-5 focus:ring-2 focus:ring-[#D9C5B2] outline-none appearance-none cursor-pointer text-[#4A3728]"
                   >
                     <option value="gram">Gram</option>
-                    <option value="ml">Mililiter (ml)</option>
-                    <option value="pcs">Pcs (Buah)</option>
+                    <option value="ml">Milliliter (ml)</option>
+                    <option value="pcs">Pcs (Items)</option>
                   </select>
                 </div>
               </div>
@@ -173,7 +173,7 @@ const MaterialSlideOver = ({ isOpen, onClose, initialData = null }) => {
               {/* Info Card */}
               <div className="bg-[#FDFBF7] border border-[#E8DFD5] rounded-2xl p-4">
                 <p className="text-xs text-[#8C6A53]">
-                  <strong>Info:</strong> Stok bahan baku akan berkurang otomatis setiap kali ada pesanan produk yang menggunakan bahan ini dalam komposisinya.
+                  <strong>Info:</strong> Raw material stock will automatically decrease whenever a product order using this material in its composition is placed.
                 </p>
               </div>
             </div>
@@ -185,13 +185,13 @@ const MaterialSlideOver = ({ isOpen, onClose, initialData = null }) => {
                 onClick={handleClose}
                 className="flex-1 px-6 py-4 rounded-2xl border border-[#E8DFD5] text-[#8C6A53] font-bold hover:bg-white transition-all active:scale-95"
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="submit"
                 className="flex-1 px-6 py-4 rounded-2xl bg-[#4A3728] text-white font-bold hover:bg-[#382a1f] shadow-xl shadow-[#4A3728]/20 transition-all active:scale-95"
               >
-                {isEditMode ? 'Simpan Perubahan' : 'Tambah Bahan'}
+                {isEditMode ? 'Save Changes' : 'Add Material'}
               </button>
             </div>
           </form>
