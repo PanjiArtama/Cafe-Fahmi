@@ -5,6 +5,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown, // Tambahan untuk Show More
+  ChevronUp,   // Tambahan untuk Show Less
   QrCode,
   LogOut,
   Menu,
@@ -39,7 +41,7 @@ const CouponCard = ({ couponId, expiresAt }) => {
   const discountDisplay = type === "percentage" ? `${value}%` : `Rp ${value.toLocaleString()}`;
 
   return (
-    <div className="bg-white border-2 border-dashed border-[#D9C5B2] p-6 rounded-[2rem] flex flex-col gap-4 relative overflow-hidden group hover:border-[#8C6A53] hover:shadow-xl transition-all duration-300">
+    <div className="bg-white border-2 border-dashed border-[#D9C5B2] p-6 rounded-4xl flex flex-col gap-4 relative overflow-hidden group hover:border-[#8C6A53] hover:shadow-xl transition-all duration-300">
 
       {/* Decorative Ticket Notches */}
       <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#FDFBF7] rounded-full border-r-2 border-[#D9C5B2] group-hover:border-[#8C6A53] transition-colors" />
@@ -104,6 +106,10 @@ const UserDashboard = () => {
   const [Coupons, setCoupons] = useState([]);
   const [profile, setProfile] = useState({});
   const [qrImage, setQrImage] = useState(null);
+  
+  // ── State untuk Limit Tampilan Order ──
+  const [visibleOrdersCount, setVisibleOrdersCount] = useState(5);
+
   useEffect(() => {
     const fetchAll = async () => {
       const coupons = await getOwnCoupon();
@@ -125,7 +131,6 @@ const UserDashboard = () => {
         icon: 'success',
         iconColor: '#10b981',
         title: 'Update Profile',
-
         background: '#ecfdf5',
         color: '#065f46'
       });
@@ -168,6 +173,7 @@ const UserDashboard = () => {
     setActiveSection(section);
     setSelectedOrder(null);
     setIsMobileMenuOpen(false);
+    setVisibleOrdersCount(5); // Reset limit ke 5 saat pindah tab
   };
 
   return (
@@ -257,7 +263,7 @@ const UserDashboard = () => {
 
           {/* --- FULL SIZE QR MODAL --- */}
           {isPreviewOpen && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 transition-all">
+            <div className="fixed inset-0 z-100 flex items-center justify-center p-6 transition-all">
               {/* Backdrop */}
               <div
                 className="absolute inset-0 bg-[#4A3728]/90 backdrop-blur-md animate-in fade-in duration-300"
@@ -305,7 +311,8 @@ const UserDashboard = () => {
               {!selectedOrder && Orders.length != 0 ? (
                 <>
                   <div className="space-y-4">
-                    {Orders.map((order) => (
+                    {/* Menggunakan slice untuk membatasi jumlah data yang tampil */}
+                    {Orders.slice(0, visibleOrdersCount).map((order) => (
                       <div
                         key={order._id}
                         onClick={() => setSelectedOrder(order)}
@@ -313,7 +320,6 @@ const UserDashboard = () => {
                       >
                         <div className="flex flex-col gap-1">
                           <StatusBadge status={order.status} />
-                          {/* Formatting the orderDate */}
                           <p className="font-bold text-lg text-[#4A3728]">
                             {new Date(order.orderDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </p>
@@ -331,6 +337,29 @@ const UserDashboard = () => {
                       </div>
                     ))}
                   </div>
+
+                  {/* ── Tombol Show More / Show Less ── */}
+                  {Orders.length > 5 && (
+                    <div className="flex justify-center gap-4 mt-8">
+                      {visibleOrdersCount < Orders.length && (
+                        <button
+                          onClick={() => setVisibleOrdersCount(prev => prev + 5)}
+                          className="flex items-center gap-2 bg-white border border-[#E8DFD5] text-[#8C6A53] px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-[#F5EFE6] transition-all shadow-sm"
+                        >
+                          <ChevronDown size={16} /> Show More
+                        </button>
+                      )}
+                      
+                      {visibleOrdersCount > 5 && (
+                        <button
+                          onClick={() => setVisibleOrdersCount(5)}
+                          className="flex items-center gap-2 bg-white border border-[#E8DFD5] text-[#8C6A53] px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-[#F5EFE6] transition-all shadow-sm"
+                        >
+                          <ChevronUp size={16} /> Show Less
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </>
               ) : Orders.length == 0 ? (
                 <div className="bg-white border border-[#E8DFD5] rounded-4xl p-8 shadow-sm flex flex-col items-center gap-4">
