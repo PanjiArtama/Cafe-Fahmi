@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Search, ChevronRight, CheckCircle2, User, Star } from 'lucide-react';
+import Swal from "sweetalert2";
 
 import { ReceiptText, ExternalLink } from 'lucide-react';
 import { getCategories, getMenuItems, getPublicWebInformation } from '../data/cafeData';
@@ -241,8 +242,26 @@ const Dashboard = () => {
     }
   }
   const onLogout = async () => {
-    localStorage.clear();
-    window.location.href = "/";
+    const result = await Swal.fire({
+      title: 'Keluar Aplikasi?',
+      text: 'Anda akan mengakhiri sesi ini dan harus login kembali untuk masuk.',
+      icon: 'warning',
+      iconColor: '#c59b27',
+      showCancelButton: true,
+      confirmButtonColor: '#5c4033',
+      cancelButtonColor: '#b89047',
+      confirmButtonText: 'Ya, Keluar',
+      cancelButtonText: 'Batal',
+      background: '#fdfbf7',
+      color: '#3e2723',
+      customClass: {
+        popup: 'rounded-xl border border-[#e7e0d4]',
+      }
+    });
+    if (result.isConfirmed) {
+      localStorage.clear();
+      window.location.href = "/";
+    }
   }
   const onDeleteMaterial = async (material) => {
     const resp = await deleteMaterialApi(material._id);
@@ -303,7 +322,7 @@ const Dashboard = () => {
 
       <AddProductSlideOver
         isOpen={isProductOpen}
-        onClose={() => { setIsProductOpen(false); setEditingProduct(null); fetchAll();}}
+        onClose={() => { setIsProductOpen(false); setEditingProduct(null); fetchAll(); }}
         categories={cat}
         materials={materials}
         initialData={editingProduct}
@@ -358,7 +377,7 @@ const Dashboard = () => {
               </span>
             </div>
             <h2 className="text-3xl md:text-4xl font-serif font-bold text-[#4A3728] capitalize">
-                {activeTab == 'front' ? 'Dashboard' : activeTab}
+              {activeTab == 'front' ? 'Dashboard' : activeTab}
             </h2>
           </div>
           {activeTab !== 'user' && activeTab !== 'companyProfile' && activeTab !== 'front' && activeTab !== 'material' &&
@@ -373,8 +392,8 @@ const Dashboard = () => {
         </header>
 
         <div className="p-2">
-          {activeTab === 'front' && dailyStats !== null &&(
-            <FrontPage dailyStats={dailyStats} orders={orders} onViewAll={onViewAll}  />
+          {activeTab === 'front' && dailyStats !== null && (
+            <FrontPage dailyStats={dailyStats} orders={orders} onViewAll={onViewAll} />
           )}
           {activeTab === 'menu' && (
             <MenuTable data={menuItems} onEdit={openEditProduct} onDelete={onDeleteProduct} />

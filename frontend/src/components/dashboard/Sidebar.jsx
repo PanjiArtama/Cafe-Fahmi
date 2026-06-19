@@ -38,8 +38,6 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout }) => {
   const handleLogoutClick = () => {
     if (onLogout) {
       onLogout();
-    } else {
-      console.log("Logout triggered. Pass an 'onLogout' prop to handle session destruction.");
     }
     setMobileOpen(false);
   };

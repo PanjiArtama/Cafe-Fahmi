@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { getOwnCoupon, getProfile, getQr, getUserOrder, updateProduct, updateProfile } from '../data/service';
 import { Toast } from '../utils/Toast';
+import Swal from "sweetalert2";
 
 // ─── Sub-Components ─────────────────────────────────────────────────────────
 
@@ -140,9 +141,27 @@ const UserDashboard = () => {
   }
 
   const handleLogout = async () => {
-    localStorage.clear();
-    sessionStorage.removeItem("cp_user");
-    window.location.href = "/";
+    const result = await Swal.fire({
+      title: 'Keluar Aplikasi?',
+      text: 'Anda akan mengakhiri sesi ini dan harus login kembali untuk masuk.',
+      icon: 'warning',
+      iconColor: '#c59b27',
+      showCancelButton: true,
+      confirmButtonColor: '#5c4033',
+      cancelButtonColor: '#b89047',
+      confirmButtonText: 'Ya, Keluar',
+      cancelButtonText: 'Batal',
+      background: '#fdfbf7',
+      color: '#3e2723',
+      customClass: {
+        popup: 'rounded-xl border border-[#e7e0d4]',
+      }
+    });
+    if (result.isConfirmed) {
+      localStorage.clear();
+      sessionStorage.removeItem("cp_user");
+      window.location.href = "/";
+    }
   }
 
   const handleNavClick = (section) => {

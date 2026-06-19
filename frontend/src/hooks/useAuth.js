@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { login, register } from "../data/auth";
-
+import { Toast } from '../utils/Toast';
 const SESSION_KEY = "cp_user";
 
 const SWAL_CONFIRM_COLOR = "#3085d6";
@@ -36,27 +36,28 @@ export default function useAuth() {
         setUser(data.user);
         await localStorage.setItem("token", data.token);
         await sessionStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
-        Swal.fire({
-          icon: "success",
-          iconColor: "#8C6A53",
-          title: '<span style="font-family: serif; font-weight: bold; color: #4A3728;">Login Berhasil</span>',
-          text: "Anda telah berhasil masuk",
-          background: SWAL_BACKGROUND,
-          confirmButtonColor: SWAL_CONFIRM_COLOR,
-          confirmButtonText: "LANJUTKAN",
+        // Swal.fire({
+        //   icon: "success",
+        //   iconColor: "#8C6A53",
+        //   title: '<span style="font-family: serif; font-weight: bold; color: #4A3728;">Login Berhasil</span>',
+        //   text: "Anda telah berhasil masuk",
+        //   background: SWAL_BACKGROUND,
+        //   confirmButtonColor: SWAL_CONFIRM_COLOR,
+        //   confirmButtonText: "LANJUTKAN",
 
 
-          customClass: {
-            popup: 'rounded-[2.5rem] border border-[#E8DFD5] shadow-2xl',
-            confirmButton: 'rounded-xl px-8 py-3 font-bold uppercase tracking-widest text-xs',
-            title: 'text-2xl',
-            htmlContainer: 'text-[#8C6A53] font-medium'
-          },
-          buttonsStyling: true,
-          showClass: {
-            popup: 'animate__animated animate__fadeInUp animate__faster'
-          }
-        });
+        //   customClass: {
+        //     popup: 'rounded-[2.5rem] border border-[#E8DFD5] shadow-2xl',
+        //     confirmButton: 'rounded-xl px-8 py-3 font-bold uppercase tracking-widest text-xs',
+        //     title: 'text-2xl',
+        //     htmlContainer: 'text-[#8C6A53] font-medium'
+        //   },
+        //   buttonsStyling: true,
+        //   showClass: {
+        //     popup: 'animate__animated animate__fadeInUp animate__faster'
+        //   }
+        // });
+        window.location.href = "/dashboard";
       } else {
         Swal.fire({
           icon: "warning",
@@ -190,10 +191,28 @@ export default function useAuth() {
   };
 
   const handleSignOut = async () => {
-    setUser(null);
-    await sessionStorage.removeItem(SESSION_KEY);
-    await localStorage.clear();
+    const result = await Swal.fire({
+      title: 'Keluar Aplikasi?',
+      text: 'Anda akan mengakhiri sesi ini dan harus login kembali untuk masuk.',
+      icon: 'warning',
+      iconColor: '#c59b27',          
+      showCancelButton: true,
+      confirmButtonColor: '#5c4033', 
+      cancelButtonColor: '#b89047',  
+      confirmButtonText: 'Ya, Keluar',
+      cancelButtonText: 'Batal',
+      background: '#fdfbf7',         
+      color: '#3e2723',              
+      customClass: {
+        popup: 'rounded-xl border border-[#e7e0d4]', 
+      }
+    });
+    if (result.isConfirmed) {
+      setUser(null);
+      sessionStorage.removeItem(SESSION_KEY);
+      localStorage.clear();
+      window.location.href = "/";
+    }
   };
-
   return { user, handleLogin, handleRegister, handleSignOut };
 }

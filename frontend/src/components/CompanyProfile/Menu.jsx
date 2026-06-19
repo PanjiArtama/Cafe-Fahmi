@@ -79,7 +79,7 @@ export default function Menu({ items = [], menuCategories = [] }) {
             {filteredItems.length > INITIAL_VISIBLE_COUNT && (
                 <div className="mt-16 text-center flex flex-col items-center justify-center">
                     {/* Minimal decorative dividing line structure */}
-                    <div className="w-16 h-[1px] bg-stone-200 mb-6" />
+                    <div className="w-16 h-px bg-stone-200 mb-6" />
                     
                     <button
                         onClick={() => setIsExpanded(!isExpanded)}

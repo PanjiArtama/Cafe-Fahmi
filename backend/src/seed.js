@@ -19,7 +19,7 @@ const run = async () => {
         const [users, admin] = await SeedUser();
         const coupons = await SeedCoupon();
         await SeedUserCoupon(users, coupons);
-        await SeedOrder(users, prod, coupons);
+        await SeedOrder(users, cat, prod, coupons);
         await SeedWebInformation();
         console.log('Seeding complete');
         process.exit();
