@@ -1,31 +1,109 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     ShoppingBag,
     Wallet,
     Tag,
     Receipt,
     History,
-    ArrowUpRight
+    ArrowUpRight,
+    TrendingUp,
+    Trophy
 } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const FrontPage = ({ orders = [], dailyStats = {}, onViewAll }) => {
+const FrontPage = ({ orders = [], onViewAll }) => {
+
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    
+    const [startDate, setStartDate] = useState(startOfWeek.toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
+    const [topSellerLimit, setTopSellerLimit] = useState(5);
+
+    const { salesData, topProducts, filteredOrders, stats } = useMemo(() => {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        const validOrders = orders.filter(o => {
+            if (o.status !== 'completed' && o.status !== 'cancelled') return false;
+            const orderDate = new Date(o.orderDate || o.createdAt);
+            return orderDate >= start && orderDate <= end;
+        });
+
+        const completedOrders = validOrders.filter(o => o.status === 'completed');
+
+        const salesByDate = {};
+        completedOrders.forEach(o => {
+            const dateStr = new Date(o.orderDate || o.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            if (!salesByDate[dateStr]) salesByDate[dateStr] = 0;
+            salesByDate[dateStr] += (o.totalAmount || 0);
+        });
+
+        const dateArray = [];
+        let currentDate = new Date(start);
+        while (currentDate <= end) {
+            dateArray.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        const salesData = dateArray.map(date => {
+            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            return {
+                name: dateStr,
+                sales: salesByDate[dateStr] || 0
+            };
+        });
+
+        const productMap = {};
+        completedOrders.forEach(o => {
+            if (o.orderDetails) {
+                o.orderDetails.forEach(item => {
+                    if (item.productId && item.productId.name) {
+                        const name = item.productId.name;
+                        if (!productMap[name]) {
+                            productMap[name] = { name, quantity: 0, revenue: 0 };
+                        }
+                        productMap[name].quantity += item.quantity;
+                        productMap[name].revenue += item.quantity * item.price;
+                    }
+                });
+            }
+        });
+
+        const topProducts = Object.values(productMap)
+            .sort((a, b) => b.quantity - a.quantity);
+
+        const totalIncome = completedOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const totalOrdersCount = validOrders.length;
+        const totalDiscount = completedOrders.reduce((sum, o) => sum + (o.discountAmount || 0), 0);
+
+        return { 
+            salesData, 
+            topProducts, 
+            filteredOrders: validOrders, 
+            stats: { totalIncome, totalOrdersCount, totalDiscount } 
+        };
+    }, [orders, startDate, endDate]);
 
     const displayStats = [
         {
             label: 'Total Income',
-            value: `Rp ${dailyStats.totalRevenue?.toLocaleString() || '0'}`,
+            value: `Rp ${stats.totalIncome.toLocaleString()}`,
             icon: Wallet,
             color: 'text-emerald-600 bg-emerald-50'
         },
         {
-            label: 'Orders Today',
-            value: dailyStats.totalOrders || '0',
+            label: 'Orders',
+            value: stats.totalOrdersCount,
             icon: ShoppingBag,
             color: 'text-blue-600 bg-blue-50'
         },
         {
             label: 'Discounts Given',
-            value: `Rp ${dailyStats.totalDiscount?.toLocaleString() || '0'}`,
+            value: `Rp ${stats.totalDiscount.toLocaleString()}`,
             icon: Tag,
             color: 'text-orange-600 bg-orange-50'
         },
@@ -35,12 +113,33 @@ const FrontPage = ({ orders = [], dailyStats = {}, onViewAll }) => {
         <div className="p-8 space-y-10 bg-[#FDFBF7] min-h-screen">
 
             {/* --- HEADER --- */}
-            <div className="flex justify-between items-end">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6">
                 <div>
-                    <h1 className="text-3xl font-serif font-bold text-[#4A3728]">Today Overview</h1>
-                    <p className="text-[#8C6A53] text-sm font-medium mt-1">Daily performance and live transaction stream.</p>
+                    <h1 className="text-3xl font-serif font-bold text-[#4A3728]">Overview</h1>
+                    <p className="text-[#8C6A53] text-sm font-medium mt-1">Performance and transaction stream.</p>
                 </div>
-
+                
+                <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-[#E8DFD5] shadow-sm">
+                    <div className="flex items-center gap-2 px-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#8C6A53]">From</span>
+                        <input 
+                            type="date" 
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="bg-[#FDFBF7] border border-[#E8DFD5] text-[#4A3728] text-sm rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-[#D9C5B2] font-medium"
+                        />
+                    </div>
+                    <div className="w-px h-6 bg-[#E8DFD5]"></div>
+                    <div className="flex items-center gap-2 px-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#8C6A53]">To</span>
+                        <input 
+                            type="date" 
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="bg-[#FDFBF7] border border-[#E8DFD5] text-[#4A3728] text-sm rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-[#D9C5B2] font-medium"
+                        />
+                    </div>
+                </div>
             </div>
 
             {/* --- CORE STATS (3-Column Grid) --- */}
@@ -54,6 +153,89 @@ const FrontPage = ({ orders = [], dailyStats = {}, onViewAll }) => {
                         <h3 className="text-4xl font-bold text-[#4A3728]">{stat.value}</h3>
                     </div>
                 ))}
+            </div>
+
+            {/* --- ANALYTICS SECTION --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Sales Chart */}
+                <div className="lg:col-span-2 bg-white border border-[#E8DFD5] p-8 rounded-[2.5rem] shadow-sm group hover:border-[#D9C5B2] transition-colors">
+                    <div className="flex items-center gap-3 mb-8">
+                        <div className="p-2 bg-[#F5EFE6] rounded-xl text-[#8C6A53]">
+                            <TrendingUp size={20} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-serif font-bold text-[#4A3728]">Sales Trend</h2>
+                            <p className="text-[10px] text-[#8C6A53] uppercase tracking-[0.2em] font-bold mt-1">Revenue over time</p>
+                        </div>
+                    </div>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={salesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#8C6A53" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#8C6A53" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8DFD5" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#8C6A53', fontSize: 12, fontWeight: 600 }} dy={10} />
+                                <YAxis 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    tick={{ fill: '#8C6A53', fontSize: 12, fontWeight: 600 }}
+                                    tickFormatter={(value) => `Rp ${(value / 1000)}k`}
+                                    dx={-10}
+                                />
+                                <Tooltip 
+                                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                                    formatter={(value) => [`Rp ${value.toLocaleString()}`, 'Revenue']}
+                                />
+                                <Area type="monotone" dataKey="sales" stroke="#8C6A53" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Top Products */}
+                <div className="bg-white border border-[#E8DFD5] p-8 rounded-[2.5rem] shadow-sm flex flex-col group hover:border-[#D9C5B2] transition-colors">
+                    <div className="flex items-start justify-between mb-6 gap-2">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-50 rounded-xl text-amber-600 shrink-0">
+                                <Trophy size={20} />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-serif font-bold text-[#4A3728]">Top Sellers</h2>
+                                <p className="text-[10px] text-[#8C6A53] uppercase tracking-[0.2em] font-bold mt-1">By Quantity Sold</p>
+                            </div>
+                        </div>
+                        <select 
+                            value={topSellerLimit} 
+                            onChange={(e) => setTopSellerLimit(Number(e.target.value))}
+                            className="bg-[#FDFBF7] border border-[#E8DFD5] text-[#8C6A53] text-[10px] font-bold rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-[#D9C5B2] cursor-pointer uppercase tracking-wider shrink-0 mt-1"
+                        >
+                            <option value={5}>Top 5</option>
+                            <option value={10}>Top 10</option>
+                            <option value={15}>Top 15</option>
+                        </select>
+                    </div>
+                    <div className="flex-1 space-y-4">
+                        {topProducts.length > 0 ? topProducts.slice(0, topSellerLimit).map((product, index) => (
+                            <div key={index} className="flex items-center gap-4 p-4 rounded-2xl bg-[#FDFBF7] border border-[#E8DFD5] hover:border-[#8C6A53] hover:shadow-md transition-all cursor-default">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${index === 0 ? 'bg-amber-100 text-amber-600' : index === 1 ? 'bg-slate-100 text-slate-600' : index === 2 ? 'bg-orange-100 text-orange-600' : 'bg-[#E8DFD5] text-[#8C6A53]'}`}>
+                                    {index + 1}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-[#4A3728] truncate text-sm">{product.name}</p>
+                                    <p className="text-xs text-[#8C6A53] font-medium mt-0.5">{product.quantity} items sold</p>
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="h-full flex items-center justify-center text-[#8C6A53] text-sm italic font-medium bg-[#FDFBF7] rounded-2xl border border-dashed border-[#E8DFD5]">
+                                No sales data available.
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* --- FULL WIDTH RECENT ORDERS --- */}
@@ -72,9 +254,8 @@ const FrontPage = ({ orders = [], dailyStats = {}, onViewAll }) => {
 
                 <div className="bg-white border border-[#E8DFD5] rounded-[3.5rem] overflow-hidden shadow-sm">
                     <div className="divide-y divide-[#F5EFE6]">
-                        {orders.filter(order => order.status === 'completed' || order.status === 'cancelled').length > 0 ? (
-                            orders
-                                .filter(order => order.status === 'completed' || order.status === 'cancelled')
+                        {filteredOrders.length > 0 ? (
+                            filteredOrders
                                 .slice(0, 8)
                                 .map((order) => (
                                     <div key={order._id} className="p-8 flex flex-wrap items-center justify-between hover:bg-[#FDFBF7] transition-colors cursor-pointer">
