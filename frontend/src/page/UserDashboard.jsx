@@ -503,7 +503,6 @@ const UserDashboard = () => {
               </div>
             </section>
           )}
-
         </div>
       </main>
     </div>
