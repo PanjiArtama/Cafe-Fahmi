@@ -2,58 +2,81 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
     useReactTable,
     getCoreRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
-    getFilteredRowModel,
     flexRender,
     createColumnHelper,
 } from '@tanstack/react-table';
-import { ChevronLeft, ChevronRight, ArrowUpDown, Filter, Calendar, FileSpreadsheet, RefreshCw } from 'lucide-react';
-import Swal from 'sweetalert2';
-import { getOrderByRange, handleExportExcel } from '../../data/service';
+import { ChevronLeft, ChevronRight, Filter, Calendar, FileSpreadsheet, RefreshCw } from 'lucide-react';
+import { getOrderHistory, handleExportExcel } from '../../data/service';
 import { Toast } from '../../utils/Toast';
 
 const columnHelper = createColumnHelper();
 
-const OrderHistoryTable = ({ data, onDetail }) => {
-    const [sorting, setSorting] = useState([]);
-    const [columnFilters, setColumnFilters] = useState([]);
+const OrderHistoryTable = ({ onDetail }) => {
+    const [finalData, setFinalData] = useState([]);
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(20);
+    const [totalPages, setTotalPages] = useState(1);
+    const [total, setTotal] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const [finalData, setFinalData] = useState(data);
-    useEffect(() => {
-        setFinalData(data);
-    }, [data])
-
-    const onApplyRange = async () => {
-        const resp = await getOrderByRange(startDate, endDate);
-        if (resp.ok) {
-            const data = await resp.json();
-            setFinalData(data);
-            Toast.fire({
-                icon: 'success',
-                iconColor: '#10b981',
-                title: 'Range Applied',
-                background: '#ecfdf5',
-                color: '#065f46'
-            });
-        } else {
-            Toast.fire({
-                icon: 'error',
-                iconColor: '#f43f5e',
-                title: 'Failed to Apply Range',
-                background: '#fff1f2',
-                color: '#9f1239'
-            });
-        }
-    }
+    const [type, setType] = useState('all');
+    const [status, setStatus] = useState('all');
 
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [appliedStartDate, setAppliedStartDate] = useState('');
+    const [appliedEndDate, setAppliedEndDate] = useState('');
+
+    const fetchHistory = async () => {
+        setIsLoading(true);
+        try {
+            const params = {
+                page,
+                limit,
+                type,
+                status
+            };
+            if (appliedStartDate) params.startDate = appliedStartDate;
+            if (appliedEndDate) params.endDate = appliedEndDate;
+
+            const res = await getOrderHistory(params);
+            setFinalData(res.data || []);
+            setTotal(res.total || 0);
+            setTotalPages(res.totalPages || 1);
+        } catch (error) {
+            console.error("Error fetching order history:", error);
+            Toast.fire({
+                icon: 'error',
+                iconColor: '#f43f5e',
+                title: 'Failed to fetch history',
+                background: '#fff1f2',
+                color: '#9f1239'
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchHistory();
+    }, [page, limit, type, status, appliedStartDate, appliedEndDate]);
+
+    const onApplyRange = () => {
+        setAppliedStartDate(startDate);
+        setAppliedEndDate(endDate);
+        setPage(1);
+        Toast.fire({
+            icon: 'success',
+            iconColor: '#10b981',
+            title: 'Range Applied',
+            background: '#ecfdf5',
+            color: '#065f46'
+        });
+    };
 
     const exportExcel = async () => {
-        // console.log('Exporting Excel with range:', startDate, endDate);
-        const excel = await handleExportExcel(startDate, endDate);
-    }
+        await handleExportExcel(startDate, endDate);
+    };
 
     const columns = useMemo(() => [
         columnHelper.accessor(row => row.userId ? row.userId.username : (row.guestName || 'Guest'), {
@@ -72,42 +95,30 @@ const OrderHistoryTable = ({ data, onDetail }) => {
                     <span className="text-[10px] font-bold text-[#8C6A53] bg-[#F5EFE6] px-2 py-1 rounded-md uppercase">Guest</span>
                 );
             },
-            filterFn: (row, columnId, filterValue) => {
-                if (filterValue === 'all') return true;
-                const isMember = !!row.getValue(columnId);
-                return filterValue === 'member' ? isMember : !isMember;
-            },
         }),
         columnHelper.accessor('orderDetails', {
             header: 'Items',
             cell: info => <span className="text-[#8C6A53]">{info.getValue()?.length || 0} items</span>,
-            enableSorting: false,
         }),
         columnHelper.accessor('totalAmount', {
             header: 'Total Price',
             cell: info => <span className="text-sm font-bold">Rp {info.getValue().toLocaleString()}</span>,
         }),
-        // --- NEW STATUS COLUMN ---
         columnHelper.accessor('status', {
             id: 'status',
             header: 'Status',
             cell: info => {
-                const status = info.getValue();
-                const isCompleted = status === 'completed';
+                const statusStr = info.getValue();
+                const isCompleted = statusStr === 'completed';
                 return (
                     <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border ${isCompleted
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                         : 'bg-orange-50 text-orange-700 border-orange-100'
                         }`}>
-                        {status}
+                        {statusStr}
                     </span>
                 );
             },
-            // Optional: adds a filter function if you want to implement filtering by status later
-            filterFn: (row, columnId, filterValue) => {
-                if (!filterValue || filterValue === 'all') return true;
-                return row.getValue(columnId) === filterValue;
-            }
         }),
         columnHelper.accessor('orderDate', {
             header: 'Date',
@@ -124,17 +135,11 @@ const OrderHistoryTable = ({ data, onDetail }) => {
             },
         }),
     ], []);
+
     const table = useReactTable({
         data: finalData,
         columns,
-        state: { sorting, columnFilters },
-        onSortingChange: setSorting,
-        onColumnFiltersChange: setColumnFilters,
         getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
-        initialState: { pagination: { pageSize: 10 } },
     });
 
     return (
@@ -193,54 +198,89 @@ const OrderHistoryTable = ({ data, onDetail }) => {
 
             {/* --- TABLE CONTENT --- */}
             <div className="bg-white border border-[#E8DFD5] rounded-3xl overflow-hidden shadow-sm">
-                {/* Existing Filter Header */}
-                <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-[#FDFBF7]/50 border-b border-[#F5EFE6]">
+                {/* Filters Header */}
+                <div className="flex flex-wrap items-center gap-4 p-4 bg-[#FDFBF7]/50 border-b border-[#F5EFE6]">
                     <div className="flex items-center gap-3">
                         <Filter size={16} className="text-[#8C6A53]" />
                         <select
-                            className="bg-white border border-[#E8DFD5] text-[#4A3728] text-sm rounded-lg px-3 py-1.5 outline-none"
-                            onChange={(e) => table.getColumn('isMember')?.setFilterValue(e.target.value)}
+                            className="bg-white border border-[#E8DFD5] text-[#4A3728] text-sm rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-[#D9C5B2]/50"
+                            value={type}
+                            onChange={(e) => {
+                                setType(e.target.value);
+                                setPage(1);
+                            }}
                         >
                             <option value="all">All Types</option>
                             <option value="member">Members Only</option>
                             <option value="guest">Guests Only</option>
                         </select>
+                        
+                        <select
+                            className="bg-white border border-[#E8DFD5] text-[#4A3728] text-sm rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-[#D9C5B2]/50"
+                            value={status}
+                            onChange={(e) => {
+                                setStatus(e.target.value);
+                                setPage(1);
+                            }}
+                        >
+                            <option value="all">All Statuses</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
                     </div>
-                    <p className="text-[10px] font-bold text-[#8C6A53] uppercase tracking-widest">
-                        {table.getRowModel().rows.length} results found
-                    </p>
+                    <div className="ml-auto">
+                        <p className="text-[10px] font-bold text-[#8C6A53] uppercase tracking-widest">
+                            {total} results found
+                        </p>
+                    </div>
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        {/* ... (Existing table head/body) */}
+                    <table className="w-full text-left border-collapse">
                         <thead className="bg-[#FDFBF7]/30">
                             {table.getHeaderGroups().map(headerGroup => (
                                 <tr key={headerGroup.id} className="border-b border-[#F5EFE6]">
                                     {headerGroup.headers.map(header => (
                                         <th key={header.id} className="p-4 text-[10px] font-bold uppercase text-[#8C6A53] tracking-wider">
-                                            <div
-                                                className={`flex items-center gap-2 ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''}`}
-                                                onClick={header.column.getToggleSortingHandler()}
-                                            >
-                                                {flexRender(header.column.columnDef.header, header.getContext())}
-                                                {header.column.getCanSort() && <ArrowUpDown size={10} />}
-                                            </div>
+                                            {flexRender(header.column.columnDef.header, header.getContext())}
                                         </th>
                                     ))}
                                 </tr>
                             ))}
                         </thead>
                         <tbody className="divide-y divide-[#F5EFE6]">
-                            {table.getRowModel().rows.map(row => (
-                                <tr key={row.id} onClick={() => onDetail(row.original._id)} className="hover:bg-[#FDFBF7]/80 cursor-pointer transition-colors">
-                                    {row.getVisibleCells().map(cell => (
-                                        <td key={cell.id} className="p-4">
-                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                        </td>
-                                    ))}
+                            {isLoading ? (
+                                Array.from({ length: 5 }).map((_, i) => (
+                                    <tr key={i} className="animate-pulse">
+                                        <td className="p-4"><div className="h-4 bg-[#E8DFD5] rounded w-24"></div></td>
+                                        <td className="p-4"><div className="h-4 bg-[#E8DFD5] rounded w-16"></div></td>
+                                        <td className="p-4"><div className="h-4 bg-[#E8DFD5] rounded w-12"></div></td>
+                                        <td className="p-4"><div className="h-4 bg-[#E8DFD5] rounded w-20"></div></td>
+                                        <td className="p-4"><div className="h-4 bg-[#E8DFD5] rounded w-16"></div></td>
+                                        <td className="p-4"><div className="h-4 bg-[#E8DFD5] rounded w-28"></div></td>
+                                    </tr>
+                                ))
+                            ) : finalData.length > 0 ? (
+                                table.getRowModel().rows.map(row => (
+                                    <tr 
+                                        key={row.id} 
+                                        onClick={() => onDetail(row.original._id)} 
+                                        className="hover:bg-[#FDFBF7]/80 cursor-pointer transition-colors"
+                                    >
+                                        {row.getVisibleCells().map(cell => (
+                                            <td key={cell.id} className="p-4">
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={6} className="p-8 text-center text-[#8C6A53] italic">
+                                        No historical orders found.
+                                    </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -251,29 +291,32 @@ const OrderHistoryTable = ({ data, onDetail }) => {
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] text-[#8C6A53] font-bold uppercase tracking-tighter">Rows:</span>
                             <select
-                                value={table.getState().pagination.pageSize}
-                                onChange={e => table.setPageSize(Number(e.target.value))}
+                                value={limit}
+                                onChange={e => {
+                                    setLimit(Number(e.target.value));
+                                    setPage(1);
+                                }}
                                 className="bg-transparent text-[#4A3728] text-xs font-bold outline-none"
                             >
                                 {[10, 20, 50].map(pageSize => <option key={pageSize} value={pageSize}>{pageSize}</option>)}
                             </select>
                         </div>
                         <span className="text-xs text-[#8C6A53] font-medium">
-                            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                            Page {page} of {totalPages}
                         </span>
                     </div>
 
                     <div className="flex gap-2">
                         <button
-                            onClick={() => table.previousPage()}
-                            disabled={!table.getCanPreviousPage()}
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            disabled={page <= 1 || isLoading}
                             className="p-2 rounded-xl border border-[#D9C5B2] bg-white disabled:opacity-30 hover:bg-[#FDFBF7] transition-all"
                         >
                             <ChevronLeft size={18} className="text-[#4A3728]" />
                         </button>
                         <button
-                            onClick={() => table.nextPage()}
-                            disabled={!table.getCanNextPage()}
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            disabled={page >= totalPages || isLoading}
                             className="p-2 rounded-xl border border-[#D9C5B2] bg-white disabled:opacity-30 hover:bg-[#FDFBF7] transition-all"
                         >
                             <ChevronRight size={18} className="text-[#4A3728]" />

@@ -149,7 +149,6 @@ describe('AdminDashboard Page', () => {
     await waitFor(() => {
       expect(cafeData.getMenuItems).toHaveBeenCalled();
       expect(cafeData.getCategories).toHaveBeenCalled();
-      expect(service.getOrders).toHaveBeenCalled();
       expect(service.getUserStat).toHaveBeenCalled();
       expect(service.getUserList).toHaveBeenCalled();
       expect(service.getAllCoupon).toHaveBeenCalled();

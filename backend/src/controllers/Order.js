@@ -139,6 +139,7 @@ export const createOrder = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
 export const changeStatus = async (req, res) => {
     try {
         const { id } = req.params;
@@ -183,11 +184,19 @@ export const changeStatus = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+/**
+ * GET /admin/order/get
+ * Supports ?status=processing to fetch only ongoing orders (lightweight).
+ * Without ?status, returns all orders (kept for backward compat but avoid calling without status).
+ */
 export const getOrders = async (req, res) => {
     try {
-        const orders = await Order.find({
-        })
-            .sort({ orderDate: -1 }) // Sorts by orderDate, newest first
+        const { status } = req.query;
+        const filter = status ? { status } : {};
+
+        const orders = await Order.find(filter)
+            .sort({ orderDate: -1 })
             .populate({
                 path: "userId",
                 select: "-password"
@@ -198,11 +207,204 @@ export const getOrders = async (req, res) => {
             });
 
         res.json(orders);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+/**
+ * GET /admin/order/history
+ * Server-side paginated history (completed + cancelled orders).
+ * Query params: page, limit, startDate, endDate, type (all|member|guest), status (all|completed|cancelled)
+ */
+export const getOrderHistory = async (req, res) => {
+    try {
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+        const skip = (page - 1) * limit;
+
+        const { startDate, endDate, type, status } = req.query;
+
+        // Build filter — only history statuses
+        const filter = { status: { $in: ['completed', 'cancelled'] } };
+
+        // Override status filter if a specific status requested
+        if (status && status !== 'all') {
+            filter.status = status;
+        }
+
+        // Date range filter
+        if (startDate || endDate) {
+            filter.orderDate = {};
+            if (startDate) {
+                const start = new Date(startDate);
+                start.setHours(0, 0, 0, 0);
+                filter.orderDate.$gte = start;
+            }
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                filter.orderDate.$lte = end;
+            }
+        }
+
+        // Member/guest type filter applied at DB level using $exists
+        if (type === 'member') {
+            filter.userId = { $exists: true, $ne: null };
+        } else if (type === 'guest') {
+            filter.userId = { $exists: false };
+            // Also handle null userId (guest orders created with userId: null/undefined)
+            filter.$or = [{ userId: { $exists: false } }, { userId: null }];
+            delete filter.userId;
+        }
+
+        const [orders, total] = await Promise.all([
+            Order.find(filter)
+                .sort({ orderDate: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate({ path: "userId", select: "username email" })
+                .populate({
+                    path: "orderDetails",
+                    select: "quantity price",
+                    populate: { path: "productId", select: "name" }
+                }),
+            Order.countDocuments(filter)
+        ]);
+
+        res.json({
+            data: orders,
+            total,
+            page,
+            totalPages: Math.ceil(total / limit),
+            limit
+        });
 
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 };
+
+/**
+ * GET /admin/order/stats
+ * Lightweight aggregation for the dashboard FrontPage.
+ * Returns chart data, top products, and summary totals without sending individual order documents.
+ * Query params: startDate, endDate
+ */
+export const getOrderStats = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        const start = startDate ? new Date(startDate) : (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return d; })();
+        start.setHours(0, 0, 0, 0);
+
+        const end = endDate ? new Date(endDate) : new Date();
+        end.setHours(23, 59, 59, 999);
+
+        const dateFilter = { orderDate: { $gte: start, $lte: end } };
+
+        // Run aggregations in parallel
+        const [summaryAgg, chartAgg, topProductsAgg, totalCountAgg] = await Promise.all([
+            // 1. Summary stats (completed only)
+            Order.aggregate([
+                { $match: { ...dateFilter, status: 'completed' } },
+                {
+                    $group: {
+                        _id: null,
+                        totalIncome: { $sum: '$totalAmount' },
+                        totalDiscount: { $sum: '$discountAmount' },
+                        completedCount: { $sum: 1 }
+                    }
+                }
+            ]),
+
+            // 2. Daily sales chart (completed only)
+            Order.aggregate([
+                { $match: { ...dateFilter, status: 'completed' } },
+                {
+                    $group: {
+                        _id: {
+                            $dateToString: { format: '%Y-%m-%d', date: '$orderDate' }
+                        },
+                        sales: { $sum: '$totalAmount' }
+                    }
+                },
+                { $sort: { _id: 1 } }
+            ]),
+
+            // 3. Top products by quantity (completed only) — lookup into OrderDetail + Product
+            Order.aggregate([
+                { $match: { ...dateFilter, status: 'completed' } },
+                { $unwind: '$orderDetails' },
+                {
+                    $lookup: {
+                        from: 'orderdetails',
+                        localField: 'orderDetails',
+                        foreignField: '_id',
+                        as: 'detail'
+                    }
+                },
+                { $unwind: '$detail' },
+                {
+                    $lookup: {
+                        from: 'products',
+                        localField: 'detail.productId',
+                        foreignField: '_id',
+                        as: 'product'
+                    }
+                },
+                { $unwind: '$product' },
+                {
+                    $group: {
+                        _id: '$product._id',
+                        name: { $first: '$product.name' },
+                        quantity: { $sum: '$detail.quantity' },
+                        revenue: { $sum: { $multiply: ['$detail.quantity', '$detail.price'] } }
+                    }
+                },
+                { $sort: { quantity: -1 } },
+                { $limit: 15 }
+            ]),
+
+            // 4. Total order count (completed + cancelled) for the period
+            Order.countDocuments({ ...dateFilter, status: { $in: ['completed', 'cancelled'] } })
+        ]);
+
+        const summary = summaryAgg[0] || { totalIncome: 0, totalDiscount: 0, completedCount: 0 };
+
+        // Build a full date array from start to end so chart has every day
+        const chartMap = {};
+        chartAgg.forEach(d => { chartMap[d._id] = d.sales; });
+
+        const salesData = [];
+        const cursor = new Date(start);
+        while (cursor <= end) {
+            const key = cursor.toISOString().split('T')[0];
+            const label = cursor.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            salesData.push({ name: label, date: key, sales: chartMap[key] || 0 });
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        res.json({
+            stats: {
+                totalIncome: summary.totalIncome,
+                totalDiscount: summary.totalDiscount,
+                totalOrdersCount: totalCountAgg,
+                completedCount: summary.completedCount
+            },
+            salesData,
+            topProducts: topProductsAgg.map(p => ({
+                name: p.name,
+                quantity: p.quantity,
+                revenue: p.revenue
+            }))
+        });
+
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 export const getOrderById = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id)
@@ -226,22 +428,42 @@ export const getOrderById = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
 export const getOrdersByUser = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const orders = await Order.find({ userId })
-            .populate({
-                path: "orderDetails",
-                populate: { path: "productId" }
-            })
-            .sort({ orderDate: -1 });
-
-        if (!orders.length) {
-            return res.status(404).json({ message: "No orders found for this user" });
+        // Legacy support: if page is not requested, return all orders as array, 404 if none
+        if (req.query.page === undefined) {
+            const orders = await Order.find({ userId })
+                .sort({ orderDate: -1 })
+                .populate({
+                    path: "orderDetails",
+                    populate: { path: "productId", select: "name" }
+                });
+            if (orders.length === 0) {
+                return res.status(404).json({ message: "No orders found for this user" });
+            }
+            return res.json(orders);
         }
 
-        res.json(orders);
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+        const skip = (page - 1) * limit;
+
+        const [orders, total] = await Promise.all([
+            Order.find({ userId })
+                .sort({ orderDate: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate({
+                    path: "orderDetails",
+                    populate: { path: "productId", select: "name" }
+                }),
+            Order.countDocuments({ userId })
+        ]);
+
+        res.json({ data: orders, total, page, totalPages: Math.ceil(total / limit), limit });
 
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -276,6 +498,7 @@ export const getOrdersByRange = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
 export const downloadExcelReport = async (req, res) => {
     try {
         const { startDate, endDate } = req.query; // Get from URL params

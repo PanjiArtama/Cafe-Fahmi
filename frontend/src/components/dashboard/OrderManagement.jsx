@@ -2,19 +2,37 @@ import React, { useEffect, useState } from 'react';
 import { User, Star, CheckCircle2, Clock, History, PackageOpen, XCircle } from 'lucide-react';
 import OrderHistoryTable from './OrderHistoryTable';
 import { Toast } from '../../utils/Toast';
-import { completeStatus } from '../../data/service';
+import { completeStatus, getOngoingOrders } from '../../data/service';
 
-const OrderManager = ({ orders, onRefresh, onDetail, orderTab = 'ongoing' }) => {
+const OrderManager = ({ onRefresh, onDetail, orderTab = 'ongoing' }) => {
     const [activeTab, setActiveTab] = useState('ongoing');
+    const [ongoingOrders, setOngoingOrders] = useState([]);
+    const [isLoadingOngoing, setIsLoadingOngoing] = useState(true);
+
+    const fetchOngoingOrders = async () => {
+        setIsLoadingOngoing(true);
+        try {
+            const data = await getOngoingOrders();
+            setOngoingOrders(data || []);
+        } catch (error) {
+            console.error("Error fetching ongoing & history counts:", error);
+        } finally {
+            setIsLoadingOngoing(false);
+        }
+    };
+
     useEffect(() => {
         if (orderTab === 'history') {
             setActiveTab('history');
         }
     }, [orderTab]);
 
-    // Check against the string value from your backend data
-    const ongoingOrders = orders.filter((o) => o.status === "processing");
-    const historyOrders = orders.filter((o) => o.status === "completed" || o.status === "cancelled");
+    useEffect(() => {
+        if (activeTab === 'ongoing') {
+            fetchOngoingOrders();
+        }
+    }, [activeTab]);
+
     const onComplete = async (data) => {
         const id = data._id;
         const status = "completed";
@@ -25,11 +43,11 @@ const OrderManager = ({ orders, onRefresh, onDetail, orderTab = 'ongoing' }) => 
                     icon: 'success',
                     iconColor: '#10b981',
                     title: 'Order Completed',
-
                     background: '#ecfdf5',
                     color: '#065f46'
                 });
-                onRefresh();
+                fetchOngoingOrders();
+                if (onRefresh) onRefresh();
             } else {
                 Toast.fire({
                     icon: 'error',
@@ -44,6 +62,7 @@ const OrderManager = ({ orders, onRefresh, onDetail, orderTab = 'ongoing' }) => 
             alert("Failed to update order status");
         }
     }
+
     const onCancel = async (data) => {
         const id = data._id;
         const status = "cancelled";
@@ -54,11 +73,11 @@ const OrderManager = ({ orders, onRefresh, onDetail, orderTab = 'ongoing' }) => 
                     icon: 'success',
                     iconColor: '#10b981',
                     title: 'Order Cancelled',
-
                     background: '#ecfdf5',
                     color: '#065f46'
                 });
-                onRefresh();
+                fetchOngoingOrders();
+                if (onRefresh) onRefresh();
             } else {
                 Toast.fire({
                     icon: 'error',
@@ -73,6 +92,7 @@ const OrderManager = ({ orders, onRefresh, onDetail, orderTab = 'ongoing' }) => 
             alert("Failed to update order status");
         }
     }
+
     return (
         <div className="max-w-full mx-auto p-6">
             {/* --- TAB NAVIGATION --- */}
@@ -82,7 +102,7 @@ const OrderManager = ({ orders, onRefresh, onDetail, orderTab = 'ongoing' }) => 
                         active={activeTab == 'ongoing'}
                         onClick={() => setActiveTab('ongoing')}
                         label="Ongoing"
-                        count={ongoingOrders.length}
+                        count={isLoadingOngoing ? undefined : ongoingOrders.length}
                         icon={<Clock size={18} />}
                     />
                     <TabButton
@@ -106,10 +126,16 @@ const OrderManager = ({ orders, onRefresh, onDetail, orderTab = 'ongoing' }) => 
             <div className="transition-all duration-300">
                 {activeTab === 'ongoing' ? (
                     <section className="animate-in fade-in slide-in-from-bottom-2">
-                        {ongoingOrders.length > 0 ? (
+                        {isLoadingOngoing ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-pulse">
+                                {[1, 2].map((i) => (
+                                    <div key={i} className="bg-[#FDFBF7] border border-[#E8DFD5] rounded-3xl p-5 h-64 shadow-sm"></div>
+                                ))}
+                            </div>
+                        ) : ongoingOrders.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {ongoingOrders.map(order => (
-                                    <OrderCard key={order.id} order={order} onComplete={() => {
+                                    <OrderCard key={order._id} order={order} onComplete={() => {
                                         onComplete(order);
                                     }} onCancel={() => {
                                         onCancel(order)
@@ -123,7 +149,7 @@ const OrderManager = ({ orders, onRefresh, onDetail, orderTab = 'ongoing' }) => 
                 ) : (
                     <section className="animate-in fade-in slide-in-from-bottom-2">
                         <div className="overflow-hidden">
-                            <OrderHistoryTable data={historyOrders} onDetail={onDetail} />
+                            <OrderHistoryTable onDetail={onDetail} />
                         </div>
                     </section>
                 )}

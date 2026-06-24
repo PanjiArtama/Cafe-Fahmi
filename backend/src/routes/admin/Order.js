@@ -3,6 +3,8 @@ import {
     createOrder,
     changeStatus,
     getOrders,
+    getOrderHistory,
+    getOrderStats,
     getOrderById,
     getOrdersByUser,
     getOrdersByRange,
@@ -14,6 +16,8 @@ import { isAdmin } from "../../middleware/auth.js";
 const AdminOrder = express.Router();
 
 AdminOrder.get("/get", isAdmin, getOrders);
+AdminOrder.get("/history", isAdmin, getOrderHistory);
+AdminOrder.get("/stats", isAdmin, getOrderStats);
 AdminOrder.get("/getReportByRange", isAdmin, downloadExcelReport);
 AdminOrder.put("/getByRange", isAdmin, getOrdersByRange);
 AdminOrder.get("/getDailyStats", isAdmin, getDailyStats);

@@ -5,8 +5,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  ChevronDown, // Tambahan untuk Show More
-  ChevronUp,   // Tambahan untuk Show Less
+  ChevronDown,
   QrCode,
   LogOut,
   Menu,
@@ -19,7 +18,7 @@ import {
   CheckCircle2,
   Maximize2
 } from 'lucide-react';
-import { getOwnCoupon, getProfile, getQr, getUserOrder, updateProduct, updateProfile } from '../data/service';
+import { getOwnCoupon, getProfile, getQr, getUserOrder, updateProfile } from '../data/service';
 import { Toast } from '../utils/Toast';
 import Swal from "sweetalert2";
 
@@ -35,6 +34,7 @@ const StatusBadge = ({ status }) => {
     </div>
   );
 };
+
 const CouponCard = ({ couponId, expiresAt }) => {
   const { code, type, value, minPurchase, maxDiscount } = couponId;
 
@@ -102,27 +102,63 @@ const UserDashboard = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  
   const [Orders, setOrders] = useState([]);
   const [Coupons, setCoupons] = useState([]);
   const [profile, setProfile] = useState({});
   const [qrImage, setQrImage] = useState(null);
   
-  // ── State untuk Limit Tampilan Order ──
-  const [visibleOrdersCount, setVisibleOrdersCount] = useState(5);
+  // ── Pagination States ──
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
 
   useEffect(() => {
-    const fetchAll = async () => {
-      const coupons = await getOwnCoupon();
-      const prof = await getProfile();
-      const qr = await getQr();
-      const orderdata = await getUserOrder();
-      setOrders(orderdata);
-      setCoupons(coupons);
-      setProfile(prof);
-      setQrImage(qr.qr)
-    }
-    fetchAll();
-  }, [])
+    const fetchProfileAndCoupons = async () => {
+      try {
+        const [coupons, prof, qr] = await Promise.all([
+          getOwnCoupon(),
+          getProfile(),
+          getQr()
+        ]);
+        setCoupons(coupons || []);
+        setProfile(prof || {});
+        setQrImage(qr?.qr || null);
+      } catch (error) {
+        console.error("Error fetching user profile data:", error);
+      }
+    };
+    fetchProfileAndCoupons();
+  }, []);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      setIsLoadingOrders(true);
+      try {
+        const res = await getUserOrder(page, 10);
+        let data = [];
+        let totalPagesCount = 1;
+        if (Array.isArray(res)) {
+          data = res;
+          totalPagesCount = 1;
+        } else if (res) {
+          data = res.data || [];
+          totalPagesCount = res.totalPages || 1;
+        }
+        if (page === 1) {
+          setOrders(data);
+        } else {
+          setOrders(prev => [...prev, ...data]);
+        }
+        setTotalPages(totalPagesCount);
+      } catch (error) {
+        console.error("Error fetching user orders:", error);
+      } finally {
+        setIsLoadingOrders(false);
+      }
+    };
+    fetchOrders();
+  }, [page]);
 
   const handleUpdate = async () => {
     const res = await updateProfile(profile);
@@ -173,7 +209,9 @@ const UserDashboard = () => {
     setActiveSection(section);
     setSelectedOrder(null);
     setIsMobileMenuOpen(false);
-    setVisibleOrdersCount(5); // Reset limit ke 5 saat pindah tab
+    if (section === 'orders') {
+      setPage(1); // Reset to page 1 to load fresh
+    }
   };
 
   return (
@@ -308,15 +346,14 @@ const UserDashboard = () => {
           {activeSection === 'orders' && (
             <section>
               <h3 className="text-2xl font-serif font-bold mb-6 text-[#4A3728]">Recent Activity</h3>
-              {!selectedOrder && Orders.length != 0 ? (
+              {!selectedOrder && Orders.length !== 0 ? (
                 <>
                   <div className="space-y-4">
-                    {/* Menggunakan slice untuk membatasi jumlah data yang tampil */}
-                    {Orders.slice(0, visibleOrdersCount).map((order) => (
+                    {Orders.map((order) => (
                       <div
                         key={order._id}
                         onClick={() => setSelectedOrder(order)}
-                        className="bg-white border border-[#E8DFD5] p-5 rounded-3xl flex items-center justify-between cursor-pointer hover:shadow-md transition-all active:scale-[0.98] group"
+                        className="bg-white border border-[#E8DFD5] p-5 rounded-3xl flex items-center justify-between cursor-pointer hover:shadow-md transition-all active:scale-[0.98] group animate-in fade-in"
                       >
                         <div className="flex flex-col gap-1">
                           <StatusBadge status={order.status} />
@@ -330,7 +367,7 @@ const UserDashboard = () => {
                         <div className="flex items-center gap-4">
                           <div className="text-right">
                             <p className="font-bold text-xl text-[#4A3728]">Rp {order.totalAmount.toLocaleString()}</p>
-                            <p className="text-[10px] text-[#8C6A53] font-bold uppercase">{order.orderDetails.length} Items</p>
+                            <p className="text-[10px] text-[#8C6A53] font-bold uppercase">{order.orderDetails?.length || 0} Items</p>
                           </div>
                           <ChevronRight size={20} className="text-[#D9C5B2] group-hover:text-[#8C6A53] transition-colors" />
                         </div>
@@ -338,34 +375,28 @@ const UserDashboard = () => {
                     ))}
                   </div>
 
-                  {/* ── Tombol Show More / Show Less ── */}
-                  {Orders.length > 5 && (
-                    <div className="flex justify-center gap-4 mt-8">
-                      {visibleOrdersCount < Orders.length && (
-                        <button
-                          onClick={() => setVisibleOrdersCount(prev => prev + 5)}
-                          className="flex items-center gap-2 bg-white border border-[#E8DFD5] text-[#8C6A53] px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-[#F5EFE6] transition-all shadow-sm"
-                        >
-                          <ChevronDown size={16} /> Show More
-                        </button>
-                      )}
-                      
-                      {visibleOrdersCount > 5 && (
-                        <button
-                          onClick={() => setVisibleOrdersCount(5)}
-                          className="flex items-center gap-2 bg-white border border-[#E8DFD5] text-[#8C6A53] px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-[#F5EFE6] transition-all shadow-sm"
-                        >
-                          <ChevronUp size={16} /> Show Less
-                        </button>
-                      )}
+                  {/* ── Server-side Load More Button ── */}
+                  {page < totalPages && (
+                    <div className="flex justify-center mt-8">
+                      <button
+                        onClick={() => setPage(prev => prev + 1)}
+                        disabled={isLoadingOrders}
+                        className="flex items-center gap-2 bg-white border border-[#E8DFD5] text-[#8C6A53] px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-[#F5EFE6] transition-all shadow-sm disabled:opacity-50"
+                      >
+                        {isLoadingOrders ? 'Loading...' : (
+                          <>
+                            <ChevronDown size={16} /> Load More
+                          </>
+                        )}
+                      </button>
                     </div>
                   )}
                 </>
-              ) : Orders.length == 0 ? (
+              ) : Orders.length === 0 && !isLoadingOrders ? (
                 <div className="bg-white border border-[#E8DFD5] rounded-4xl p-8 shadow-sm flex flex-col items-center gap-4">
                   <p className="text-[#8C6A53] text-sm font-bold">You haven't made any orders yet.</p>
                 </div>
-              ) : (
+              ) : selectedOrder ? (
                 <div className="bg-white border border-[#E8DFD5] rounded-4xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
                   {/* HEADER */}
                   <div className="p-6 border-b border-[#F5EFE6] flex items-center justify-between bg-[#FDFBF7]/50">
@@ -390,7 +421,7 @@ const UserDashboard = () => {
                   <div className="p-8">
                     <div className="space-y-5 mb-8">
                       <label className="text-[10px] font-bold text-[#D9C5B2] uppercase tracking-[0.2em] block mb-4">Items Summary</label>
-                      {selectedOrder.orderDetails.map((item, idx) => (
+                      {selectedOrder.orderDetails?.map((item, idx) => (
                         <div key={idx} className="flex justify-between items-start">
                           <div className="flex gap-3">
                             <div className="w-10 h-10 bg-[#F5EFE6] rounded-xl flex items-center justify-center text-[#8C6A53] font-bold text-xs shrink-0">
@@ -436,6 +467,12 @@ const UserDashboard = () => {
                     </div>
                   </div>
                 </div>
+              ) : (
+                <div className="space-y-4 animate-pulse">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="bg-white border border-[#E8DFD5] p-5 rounded-3xl h-24 shadow-sm"></div>
+                  ))}
+                </div>
               )}
             </section>
           )}
@@ -452,7 +489,7 @@ const UserDashboard = () => {
                   ) :
                     (
                       Coupons.map((coupon) => (
-                        <CouponCard key={coupon.id} {...coupon} />
+                        <CouponCard key={coupon._id} {...coupon} />
                       ))
                     )
                 }
@@ -470,7 +507,7 @@ const UserDashboard = () => {
                       <label className="text-xs font-bold text-[#8C6A53] uppercase tracking-widest">Username</label>
                       <input
                         type="text"
-                        value={profile.username}
+                        value={profile.username || ''}
                         onChange={(e) => setProfile({ ...profile, username: e.target.value })}
                         className="w-full bg-[#FDFBF7] border border-[#E8DFD5] rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#D9C5B2] outline-none font-medium"
                       />
@@ -479,7 +516,7 @@ const UserDashboard = () => {
                       <label className="text-xs font-bold text-[#8C6A53] uppercase tracking-widest">Phone</label>
                       <input
                         type="text"
-                        value={profile.phone}
+                        value={profile.phone || ''}
                         onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                         className="w-full bg-[#FDFBF7] border border-[#E8DFD5] rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#D9C5B2] outline-none font-medium"
                       />
@@ -488,7 +525,7 @@ const UserDashboard = () => {
                       <label className="text-xs font-bold text-[#8C6A53] uppercase tracking-widest">Email</label>
                       <input
                         type="email"
-                        value={profile.email}
+                        value={profile.email || ''}
                         onChange={(e) => setProfile({ ...profile, email: e.target.value })}
                         className="w-full bg-[#FDFBF7] border border-[#E8DFD5] rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#D9C5B2] outline-none font-medium"
                       />

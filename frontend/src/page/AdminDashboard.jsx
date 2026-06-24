@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 
 import { ReceiptText, ExternalLink } from 'lucide-react';
 import { getCategories, getMenuItems, getPublicWebInformation } from '../data/cafeData';
-import { addCategory, AssignCoupon, deleteProduct, getAllCoupon, getAvailableCoupon, getOrders, getUserList, getUserStat, updateWebInformation, getOrderDetail, deleteCoupon, handleExportExcel, getDailyStats, getMaterials, deleteMaterial as deleteMaterialApi } from '../data/service';
+import { addCategory, AssignCoupon, deleteProduct, getAllCoupon, getAvailableCoupon, getUserList, getUserStat, updateWebInformation, getOrderDetail, deleteCoupon, handleExportExcel, getDailyStats, getMaterials, deleteMaterial as deleteMaterialApi } from '../data/service';
 
 import Sidebar from '../components/dashboard/Sidebar';
 import MenuTable from '../components/dashboard/MenuTable';
@@ -90,10 +90,9 @@ const Dashboard = () => {
   const [savingCategory, setSavingCategory] = useState(false);
   const [avalCoupon, setAvalCoupon] = useState([]);
   const fetchAll = async () => {
-    const [menuRes, categories, orders, users, userL, coupons, avCoupon, daily, mats] = await Promise.all([
+    const [menuRes, categories, users, userL, coupons, avCoupon, daily, mats] = await Promise.all([
       getMenuItems(),
       getCategories(),
-      getOrders(),
       getUserStat(),
       getUserList(),
       getAllCoupon(),
@@ -104,7 +103,6 @@ const Dashboard = () => {
     setDailyStats(daily);
     setMenuItems(menuRes);
     setCat(categories);
-    setOrders(orders);
     setUser(users);
     setUserList(userL)
     setCoupons(coupons);
@@ -393,13 +391,13 @@ const Dashboard = () => {
 
         <div className="p-2">
           {activeTab === 'front' && dailyStats !== null && (
-            <FrontPage dailyStats={dailyStats} orders={orders} onViewAll={onViewAll} />
+            <FrontPage dailyStats={dailyStats} onViewAll={onViewAll} />
           )}
           {activeTab === 'menu' && (
             <MenuTable data={menuItems} onEdit={openEditProduct} onDelete={onDeleteProduct} />
           )}
           {activeTab === 'order' && (
-            <OrderManager orders={orders} onRefresh={fetchAll} onDetail={onDetailOrder} orderTab={orderTab} />
+            <OrderManager onRefresh={fetchAll} onDetail={onDetailOrder} orderTab={orderTab} />
           )}
           {activeTab === 'user' && (
             <UserTable rawData={user} onAssignCoupon={(users) => { setIsAssignCouponOpen(true); setSelectedUsersForCoupon(users) }} />

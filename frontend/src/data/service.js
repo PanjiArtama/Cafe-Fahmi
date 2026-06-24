@@ -91,6 +91,87 @@ export const getOrders = async () => {
     return data;
 }
 
+/**
+ * Fetch only ongoing (processing) orders — small dataset, no pagination needed.
+ */
+export const getOngoingOrders = async () => {
+    const response = await fetch(`${baseUrl}/admin/order/get?status=processing`, {
+        method: 'GET',
+        headers: headers()
+    });
+    if (!response.ok) {
+        Toast.fire({
+            icon: 'error',
+            iconColor: '#f43f5e',
+            title: 'Failed get data',
+            background: '#fff1f2',
+            color: '#9f1239'
+        });
+        return [];
+    }
+    const data = await response.json();
+    return data;
+}
+
+/**
+ * Fetch paginated order history (completed + cancelled).
+ * @param {object} params - { page, limit, startDate, endDate, type, status }
+ * @returns {{ data, total, page, totalPages, limit }}
+ */
+export const getOrderHistory = async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', params.page);
+    if (params.limit) query.set('limit', params.limit);
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    if (params.type && params.type !== 'all') query.set('type', params.type);
+    if (params.status && params.status !== 'all') query.set('status', params.status);
+
+    const response = await fetch(`${baseUrl}/admin/order/history?${query.toString()}`, {
+        method: 'GET',
+        headers: headers()
+    });
+    if (!response.ok) {
+        Toast.fire({
+            icon: 'error',
+            iconColor: '#f43f5e',
+            title: 'Failed get order history',
+            background: '#fff1f2',
+            color: '#9f1239'
+        });
+        return { data: [], total: 0, page: 1, totalPages: 0, limit: 20 };
+    }
+    return await response.json();
+}
+
+/**
+ * Fetch aggregated dashboard stats (no individual order documents).
+ * @param {string} startDate - ISO date string (YYYY-MM-DD)
+ * @param {string} endDate   - ISO date string (YYYY-MM-DD)
+ * @returns {{ stats, salesData, topProducts }}
+ */
+export const getOrderStats = async (startDate, endDate) => {
+    const query = new URLSearchParams();
+    if (startDate) query.set('startDate', startDate);
+    if (endDate) query.set('endDate', endDate);
+
+    const response = await fetch(`${baseUrl}/admin/order/stats?${query.toString()}`, {
+        method: 'GET',
+        headers: headers()
+    });
+    if (!response.ok) {
+        Toast.fire({
+            icon: 'error',
+            iconColor: '#f43f5e',
+            title: 'Failed get dashboard stats',
+            background: '#fff1f2',
+            color: '#9f1239'
+        });
+        return { stats: { totalIncome: 0, totalDiscount: 0, totalOrdersCount: 0 }, salesData: [], topProducts: [] };
+    }
+    return await response.json();
+}
+
 export const getUserStat = async (date) => {
     const response = await fetch(`${baseUrl}/admin/user/getStat`, {
         method: 'POST',
@@ -149,14 +230,21 @@ export const getProfile = async () => {
     return data;
 }
 
-export const getUserOrder = async () => {
-    const response = await fetch(`${baseUrl}/user/order`, {
+/**
+ * Fetch paginated user orders.
+ * @param {number} page
+ * @param {number} limit
+ * @returns {{ data, total, page, totalPages, limit }}
+ */
+export const getUserOrder = async (page = 1, limit = 10) => {
+    const query = new URLSearchParams({ page, limit });
+    const response = await fetch(`${baseUrl}/user/order?${query.toString()}`, {
         method: 'GET',
         headers: headers()
     });
     if (!response.ok) {
         if (response.status === 404) {
-            return [];
+            return { data: [], total: 0, page: 1, totalPages: 0, limit };
         }
         Toast.fire({
             icon: 'error',
@@ -165,9 +253,9 @@ export const getUserOrder = async () => {
             background: '#fff1f2',
             color: '#9f1239'
         });
+        return { data: [], total: 0, page: 1, totalPages: 0, limit };
     }
-    const data = await response.json();
-    return data;
+    return await response.json();
 }
 
 export const getDataFromQR = async (link) => {

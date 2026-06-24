@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     ShoppingBag,
     Wallet,
@@ -10,9 +10,9 @@ import {
     Trophy
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { getOrderStats, getOrderHistory } from '../../data/service';
 
-const FrontPage = ({ orders = [], onViewAll }) => {
-
+const FrontPage = ({ onViewAll }) => {
     const today = new Date();
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay());
@@ -21,72 +21,41 @@ const FrontPage = ({ orders = [], onViewAll }) => {
     const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
     const [topSellerLimit, setTopSellerLimit] = useState(5);
 
-    const { salesData, topProducts, filteredOrders, stats } = useMemo(() => {
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
+    const [stats, setStats] = useState({ totalIncome: 0, totalOrdersCount: 0, totalDiscount: 0 });
+    const [salesData, setSalesData] = useState([]);
+    const [topProducts, setTopProducts] = useState([]);
+    const [recentOrders, setRecentOrders] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-        const validOrders = orders.filter(o => {
-            if (o.status !== 'completed' && o.status !== 'cancelled') return false;
-            const orderDate = new Date(o.orderDate || o.createdAt);
-            return orderDate >= start && orderDate <= end;
-        });
-
-        const completedOrders = validOrders.filter(o => o.status === 'completed');
-
-        const salesByDate = {};
-        completedOrders.forEach(o => {
-            const dateStr = new Date(o.orderDate || o.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            if (!salesByDate[dateStr]) salesByDate[dateStr] = 0;
-            salesByDate[dateStr] += (o.totalAmount || 0);
-        });
-
-        const dateArray = [];
-        let currentDate = new Date(start);
-        while (currentDate <= end) {
-            dateArray.push(new Date(currentDate));
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-
-        const salesData = dateArray.map(date => {
-            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            return {
-                name: dateStr,
-                sales: salesByDate[dateStr] || 0
-            };
-        });
-
-        const productMap = {};
-        completedOrders.forEach(o => {
-            if (o.orderDetails) {
-                o.orderDetails.forEach(item => {
-                    if (item.productId && item.productId.name) {
-                        const name = item.productId.name;
-                        if (!productMap[name]) {
-                            productMap[name] = { name, quantity: 0, revenue: 0 };
-                        }
-                        productMap[name].quantity += item.quantity;
-                        productMap[name].revenue += item.quantity * item.price;
-                    }
-                });
+    useEffect(() => {
+        let isMounted = true;
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const [statsRes, historyRes] = await Promise.all([
+                    getOrderStats(startDate, endDate),
+                    getOrderHistory({ page: 1, limit: 8, startDate, endDate })
+                ]);
+                if (isMounted) {
+                    setStats(statsRes.stats || { totalIncome: 0, totalOrdersCount: 0, totalDiscount: 0 });
+                    setSalesData(statsRes.salesData || []);
+                    setTopProducts(statsRes.topProducts || []);
+                    setRecentOrders(historyRes.data || []);
+                }
+            } catch (error) {
+                console.error("Error fetching dashboard stats/history:", error);
+            } finally {
+                if (isMounted) {
+                    setIsLoading(false);
+                }
             }
-        });
-
-        const topProducts = Object.values(productMap)
-            .sort((a, b) => b.quantity - a.quantity);
-
-        const totalIncome = completedOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-        const totalOrdersCount = validOrders.length;
-        const totalDiscount = completedOrders.reduce((sum, o) => sum + (o.discountAmount || 0), 0);
-
-        return { 
-            salesData, 
-            topProducts, 
-            filteredOrders: validOrders, 
-            stats: { totalIncome, totalOrdersCount, totalDiscount } 
         };
-    }, [orders, startDate, endDate]);
+
+        fetchData();
+        return () => {
+            isMounted = false;
+        };
+    }, [startDate, endDate]);
 
     const displayStats = [
         {
@@ -108,6 +77,72 @@ const FrontPage = ({ orders = [], onViewAll }) => {
             color: 'text-orange-600 bg-orange-50'
         },
     ];
+
+    if (isLoading) {
+        return (
+            <div className="p-8 space-y-10 bg-[#FDFBF7] min-h-screen animate-pulse">
+                {/* Header skeleton */}
+                <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6">
+                    <div className="space-y-2">
+                        <div className="h-8 w-48 bg-[#E8DFD5] rounded-lg"></div>
+                        <div className="h-4 w-64 bg-[#E8DFD5] rounded-lg"></div>
+                    </div>
+                    <div className="h-12 w-80 bg-white border border-[#E8DFD5] rounded-2xl shadow-sm"></div>
+                </div>
+
+                {/* Stats cards skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="bg-white border border-[#E8DFD5] p-8 rounded-[2.5rem] shadow-sm">
+                            <div className="w-14 h-14 bg-[#E8DFD5] rounded-2xl mb-6"></div>
+                            <div className="h-3 w-24 bg-[#E8DFD5] rounded-lg mb-2"></div>
+                            <div className="h-8 w-32 bg-[#E8DFD5] rounded-lg"></div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Analytics skeleton */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 bg-white border border-[#E8DFD5] p-8 rounded-[2.5rem] shadow-sm h-[32rem]">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="w-10 h-10 bg-[#E8DFD5] rounded-xl"></div>
+                            <div className="space-y-2">
+                                <div className="h-5 w-28 bg-[#E8DFD5] rounded-lg"></div>
+                                <div className="h-3 w-36 bg-[#E8DFD5] rounded-lg"></div>
+                            </div>
+                        </div>
+                        <div className="h-[24rem] bg-[#FDFBF7] rounded-2xl border border-dashed border-[#E8DFD5]"></div>
+                    </div>
+                    <div className="bg-white border border-[#E8DFD5] p-8 rounded-[2.5rem] shadow-sm h-[32rem]">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-[#E8DFD5] rounded-xl"></div>
+                            <div className="space-y-2">
+                                <div className="h-5 w-28 bg-[#E8DFD5] rounded-lg"></div>
+                                <div className="h-3 w-36 bg-[#E8DFD5] rounded-lg"></div>
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            {[1, 2, 3, 4].map((i) => (
+                                <div key={i} className="h-16 bg-[#FDFBF7] rounded-2xl border border-[#E8DFD5]"></div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Recent orders skeleton */}
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between px-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 bg-[#E8DFD5] rounded-lg"></div>
+                            <div className="h-6 w-36 bg-[#E8DFD5] rounded-lg"></div>
+                        </div>
+                        <div className="h-4 w-32 bg-[#E8DFD5] rounded-lg"></div>
+                    </div>
+                    <div className="bg-white border border-[#E8DFD5] rounded-[3.5rem] h-64"></div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="p-8 space-y-10 bg-[#FDFBF7] min-h-screen">
@@ -218,7 +253,7 @@ const FrontPage = ({ orders = [], onViewAll }) => {
                             <option value={15}>Top 15</option>
                         </select>
                     </div>
-                    <div className="flex-1 space-y-4">
+                    <div className="flex-1 space-y-4 overflow-y-auto max-h-[22rem]">
                         {topProducts.length > 0 ? topProducts.slice(0, topSellerLimit).map((product, index) => (
                             <div key={index} className="flex items-center gap-4 p-4 rounded-2xl bg-[#FDFBF7] border border-[#E8DFD5] hover:border-[#8C6A53] hover:shadow-md transition-all cursor-default">
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${index === 0 ? 'bg-amber-100 text-amber-600' : index === 1 ? 'bg-slate-100 text-slate-600' : index === 2 ? 'bg-orange-100 text-orange-600' : 'bg-[#E8DFD5] text-[#8C6A53]'}`}>
@@ -230,7 +265,7 @@ const FrontPage = ({ orders = [], onViewAll }) => {
                                 </div>
                             </div>
                         )) : (
-                            <div className="h-full flex items-center justify-center text-[#8C6A53] text-sm italic font-medium bg-[#FDFBF7] rounded-2xl border border-dashed border-[#E8DFD5]">
+                            <div className="h-full flex items-center justify-center text-[#8C6A53] text-sm italic font-medium bg-[#FDFBF7] rounded-2xl border border-dashed border-[#E8DFD5] min-h-[10rem]">
                                 No sales data available.
                             </div>
                         )}
@@ -254,9 +289,8 @@ const FrontPage = ({ orders = [], onViewAll }) => {
 
                 <div className="bg-white border border-[#E8DFD5] rounded-[3.5rem] overflow-hidden shadow-sm">
                     <div className="divide-y divide-[#F5EFE6]">
-                        {filteredOrders.length > 0 ? (
-                            filteredOrders
-                                .slice(0, 8)
+                        {recentOrders.length > 0 ? (
+                            recentOrders
                                 .map((order) => (
                                     <div key={order._id} className="p-8 flex flex-wrap items-center justify-between hover:bg-[#FDFBF7] transition-colors cursor-pointer">
                                         <div className="flex items-center gap-6 min-w-[300px]">
@@ -301,7 +335,7 @@ const FrontPage = ({ orders = [], onViewAll }) => {
                                 ))
                         ) : (
                             <div className="p-20 text-center">
-                                <p className="text-[#8C6A53] font-medium italic">No transactions recorded yet today.</p>
+                                <p className="text-[#8C6A53] font-medium italic">No transactions recorded yet in this range.</p>
                             </div>
                         )}
                     </div>
