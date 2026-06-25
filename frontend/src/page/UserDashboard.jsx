@@ -16,11 +16,14 @@ import {
   Save,
   Clock,
   CheckCircle2,
-  Maximize2
+  Maximize2,
+  Plus // Imported Plus icon for the action button
 } from 'lucide-react';
 import { getOwnCoupon, getProfile, getQr, getUserOrder, updateProfile } from '../data/service';
 import { Toast } from '../utils/Toast';
 import Swal from "sweetalert2";
+import NewUserOrder from '../components/userDashboard/AddOrderModal'; // Adjust path if needed depending on file tree
+import { getMenuItems } from '../data/cafeData'; // Import getMenuList function
 
 // ─── Sub-Components ─────────────────────────────────────────────────────────
 
@@ -102,26 +105,37 @@ const UserDashboard = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  
-  const [Orders, setOrders] = useState([]);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false); // Modal state
   const [Coupons, setCoupons] = useState([]);
+  const [Orders, setOrders] = useState([]);
   const [profile, setProfile] = useState({});
   const [qrImage, setQrImage] = useState(null);
-  
+
   // ── Pagination States ──
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
 
+  // Fallback product list array if needed for testing modal compilation
+  const [productList, setProductList] = useState([]);
+
+  const refreshOrders = () => {
+    setPage(1);
+    // Add additional handling or custom order processing execution logic here later
+  };
+
   useEffect(() => {
     const fetchProfileAndCoupons = async () => {
       try {
-        const [coupons, prof, qr] = await Promise.all([
+        const [coupons, menuItems, prof, qr] = await Promise.all([
           getOwnCoupon(),
+          getMenuItems(),
           getProfile(),
           getQr()
         ]);
+        console.log(coupons);
         setCoupons(coupons || []);
+        setProductList(menuItems || []);
         setProfile(prof || {});
         setQrImage(qr?.qr || null);
       } catch (error) {
@@ -256,46 +270,58 @@ const UserDashboard = () => {
         <div className="max-w-4xl mx-auto">
 
           {/* ── Identity Barcode Card ── */}
-          <div className="bg-white border border-[#E8DFD5] rounded-4xl p-6 mb-10 shadow-sm flex flex-col sm:flex-row items-center gap-8">
-            <div className="bg-[#FDFBF7] p-4 rounded-3xl border border-[#D9C5B2] shrink-0 relative group">
-              <div
-                className="cursor-pointer relative overflow-hidden rounded-xl"
-                onClick={() => qrImage && setIsPreviewOpen(true)}
-              >
-                {qrImage ? (
-                  <div className="relative group">
-                    <img
-                      src={qrImage}
-                      alt="User QR Code"
-                      className="w-24 h-24 object-cover hover:scale-105 transition-transform duration-200"
-                    />
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-[#4A3728]/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <Maximize2 size={20} className="text-white" />
+          <div className="bg-white border border-[#E8DFD5] rounded-4xl p-6 mb-10 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-8">
+            <div className="flex flex-col sm:flex-row items-center gap-8 flex-1">
+              <div className="bg-[#FDFBF7] p-4 rounded-3xl border border-[#D9C5B2] shrink-0 relative group">
+                <div
+                  className="cursor-pointer relative overflow-hidden rounded-xl"
+                  onClick={() => qrImage && setIsPreviewOpen(true)}
+                >
+                  {qrImage ? (
+                    <div className="relative group">
+                      <img
+                        src={qrImage}
+                        alt="User QR Code"
+                        className="w-24 h-24 object-cover hover:scale-105 transition-transform duration-200"
+                      />
+                      {/* Hover Overlay */}
+                      <div className="absolute inset-0 bg-[#4A3728]/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <Maximize2 size={20} className="text-white" />
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <QrCode size={95} strokeWidth={1.5} className="text-[#4A3728]" />
-                )}
+                  ) : (
+                    <QrCode size={95} strokeWidth={1.5} className="text-[#4A3728]" />
+                  )}
+                </div>
+
+                {/* Badge near barcode */}
+                <div className="absolute -top-3 -right-3 bg-[#8C6A53] text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-4 border-white shadow-lg group-hover:scale-110 transition-transform">
+                  {Coupons.length}
+                </div>
               </div>
 
-              {/* Badge near barcode */}
-              <div className="absolute -top-3 -right-3 bg-[#8C6A53] text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-4 border-white shadow-lg group-hover:scale-110 transition-transform">
-                {Coupons.length}
+              <div className="text-center sm:text-left">
+                <h2 className="text-2xl font-serif font-bold text-[#4A3728] mb-1">{profile.username}</h2>
+                <p className="text-[#8C6A53] text-sm mb-4 tracking-wide">
+                  Member ID: CUST-***{profile._id ? profile._id.slice(-3) : ''}
+                </p>
+                <div className="inline-flex items-center gap-2 bg-[#F5EFE6] px-4 py-2 rounded-2xl">
+                  <Ticket size={16} className="text-[#8C6A53]" />
+                  <span className="text-xs font-bold text-[#8C6A53] uppercase tracking-widest">
+                    {Coupons.length} Coupons Available
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="text-center sm:text-left flex-1">
-              <h2 className="text-2xl font-serif font-bold text-[#4A3728] mb-1">{profile.username}</h2>
-              <p className="text-[#8C6A53] text-sm mb-4 tracking-wide">
-                Member ID: CUST-***{profile._id ? profile._id.slice(-3) : ''}
-              </p>
-              <div className="inline-flex items-center gap-2 bg-[#F5EFE6] px-4 py-2 rounded-2xl">
-                <Ticket size={16} className="text-[#8C6A53]" />
-                <span className="text-xs font-bold text-[#8C6A53] uppercase tracking-widest">
-                  {Coupons.length} Coupons Available
-                </span>
-              </div>
+            {/* NEW ORDER ACTION BUTTON */}
+            <div className="w-full sm:w-auto shrink-0">
+              <button
+                onClick={() => setIsOrderModalOpen(true)}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#4A3728] text-white px-6 py-4 rounded-2xl font-bold uppercase text-xs tracking-widest hover:bg-[#382a1f] transition-all shadow-md"
+              >
+                <Plus size={16} /> New Order
+              </button>
             </div>
           </div>
 
@@ -542,6 +568,15 @@ const UserDashboard = () => {
           )}
         </div>
       </main>
+
+      {/* RENDER NEW USER ORDER MODAL */}
+      <NewUserOrder
+        isOpen={isOrderModalOpen}
+        onClose={() => setIsOrderModalOpen(false)}
+        productList={productList}
+        onRefresh={refreshOrders}
+        couponlist={Coupons}
+      />
     </div>
   );
 };
