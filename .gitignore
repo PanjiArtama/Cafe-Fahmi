@@ -9,7 +9,7 @@ backend/src/seeders/
 backend/src/seed.js
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-
+#test
 # Runtime data
 pids
 *.pid
