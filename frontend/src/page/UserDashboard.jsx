@@ -17,7 +17,8 @@ import {
   Clock,
   CheckCircle2,
   Maximize2,
-  Plus // Imported Plus icon for the action button
+  Plus, // Imported Plus icon for the action button
+  Home
 } from 'lucide-react';
 import { getOwnCoupon, getProfile, getQr, getUserOrder, updateProfile } from '../data/service';
 import { Toast } from '../utils/Toast';
@@ -233,10 +234,13 @@ const UserDashboard = () => {
 
       {/* ── Mobile Header ── */}
       <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-[#E8DFD5] sticky top-0 z-50">
-        <div className="flex items-center gap-2 text-[#8C6A53]">
+        <button
+          onClick={() => window.location.href = '/'}
+          className="flex items-center gap-2 text-[#8C6A53] active:opacity-70"
+        >
           <Coffee size={20} />
           <span className="font-serif font-bold text-lg">Cafe Dashboard</span>
-        </div>
+        </button>
         <button onClick={() => setIsMobileMenuOpen(true)} className="p-2"><Menu size={24} /></button>
       </div>
 
@@ -244,8 +248,16 @@ const UserDashboard = () => {
       <div className={`fixed inset-0 z-60 md:relative md:z-0 transform transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:w-72`}>
         <div className="absolute inset-0 bg-[#4A3728]/20 backdrop-blur-sm md:hidden" onClick={() => setIsMobileMenuOpen(false)} />
         <aside className="relative w-72 h-full bg-white border-r border-[#E8DFD5] p-6 flex flex-col">
+
+          {/* HEADER SIDEBAR (SEKARANG BISA DIKLIK UNTUK KEMBALI KE /) */}
           <div className="flex justify-between items-center mb-10 px-2">
-            <h1 className="font-serif font-bold text-xl hidden md:block text-[#8C6A53]">Cafe Dashboard</h1>
+            <button
+              onClick={() => window.location.href = '/'}
+              className="flex items-center gap-2 text-[#8C6A53] hover:opacity-80 transition-opacity text-left layout-auto"
+            >
+              <Coffee size={24} />
+              <h1 className="font-serif font-bold text-xl hidden md:block">Cafe Dashboard</h1>
+            </button>
             <button className="md:hidden" onClick={() => setIsMobileMenuOpen(false)}><X size={24} /></button>
           </div>
 
