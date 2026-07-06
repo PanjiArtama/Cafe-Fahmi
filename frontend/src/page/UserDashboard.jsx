@@ -327,14 +327,14 @@ const UserDashboard = () => {
             </div>
 
             {/* NEW ORDER ACTION BUTTON */}
-            <div className="w-full sm:w-auto shrink-0">
+            {/* <div className="w-full sm:w-auto shrink-0">
               <button
                 onClick={() => setIsOrderModalOpen(true)}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#4A3728] text-white px-6 py-4 rounded-2xl font-bold uppercase text-xs tracking-widest hover:bg-[#382a1f] transition-all shadow-md"
               >
                 <Plus size={16} /> New Order
               </button>
-            </div>
+            </div> */}
           </div>
 
           {/* --- FULL SIZE QR MODAL --- */}
