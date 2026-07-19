@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Save, Plus, Trash2, Image, MapPin, Phone, Clock, Type, FileText, Sparkles, Building2, Loader2, Upload } from 'lucide-react';
 import { Toast } from '../../utils/Toast';
-
-const baseUrl = import.meta.env.VITE_API_URL;
+import { resolveImageUrl } from '../../utils/imageUrl';
 
 // ── Section Card wrapper ──────────────────────────────────────────────────────
 const SectionCard = ({ icon, title, subtitle, children }) => (
@@ -50,15 +49,8 @@ const Field = ({ label, value, onChange, type = 'text', placeholder, rows }) => 
 const getImageSrc = (item) => {
   // If there's a preview URL (from file selection), use it
   if (item.previewUrl) return item.previewUrl;
-  // If it's an absolute URL (http/https), use directly
-  if (item.imagePath && (item.imagePath.startsWith('http://') || item.imagePath.startsWith('https://'))) {
-    return item.imagePath;
-  }
-  // If it's a server path like /uploads/..., prepend base URL
-  if (item.imagePath && item.imagePath.startsWith('/uploads/')) {
-    return `${baseUrl}${item.imagePath}`;
-  }
-  return item.imagePath || '';
+  // Use centralized resolver for server paths
+  return resolveImageUrl(item.imagePath);
 };
 
 // ── Gallery Item Card ─────────────────────────────────────────────────────────

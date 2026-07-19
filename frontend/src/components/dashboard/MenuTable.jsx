@@ -13,6 +13,7 @@ import {
   ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { getAllCategories } from '../../data/cafeData';
+import { resolveImageUrl } from '../../utils/imageUrl';
 
 const MenuTable = ({ data, onEdit, onDelete }) => {
   const [globalFilter, setGlobalFilter] = useState('');
@@ -38,7 +39,7 @@ const MenuTable = ({ data, onEdit, onDelete }) => {
           <div className="h-11 w-11 rounded-lg overflow-hidden bg-[#FFFDF9] border border-[#EFEAE2] shrink-0 flex items-center justify-center">
             {row.original.image ? (
               <img
-                src={`http://localhost:5005${row.original.image}`}
+                src={resolveImageUrl(row.original.image)}
                 className="h-full w-full object-cover"
                 alt=""
               />

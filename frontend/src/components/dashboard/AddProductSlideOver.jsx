@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Camera, Plus, Trash2 } from 'lucide-react';
 import { addProduct, updateProduct } from '../../data/service';
+import { resolveImageUrl } from '../../utils/imageUrl';
 import Swal from 'sweetalert2';
 import { Toast } from '../../utils/Toast';
 
@@ -31,7 +32,7 @@ const AddProductSlideOver = ({ isOpen, onClose, categories, materials = [], init
           quantity: c.quantity || ''
         })) || [],
       });
-      setImagePreview(initialData.image ? `http://localhost:5005${initialData.image}` : null);
+      setImagePreview(initialData.image ? resolveImageUrl(initialData.image) : null);
       setIsCustom(false);
     } else if (isOpen && !initialData) {
       setFormData(EMPTY_FORM);

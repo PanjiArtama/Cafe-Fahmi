@@ -1,13 +1,5 @@
 import { galleryItems as defaultGallery } from "../../data/cafeData";
-
-const baseUrl = import.meta.env.VITE_API_URL;
-
-const resolveImageUrl = (path) => {
-    if (!path) return '';
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    if (path.startsWith('/uploads/')) return `${baseUrl}${path}`;
-    return path;
-};
+import { resolveImageUrl } from "../../utils/imageUrl";
 
 function GalleryCard({ item }) {
     const temp = resolveImageUrl(item.imagePath || item.image);
