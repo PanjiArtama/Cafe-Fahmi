@@ -257,7 +257,6 @@ export const getOrderHistory = async (req, res) => {
             filter.$or = [{ userId: { $exists: false } }, { userId: null }];
             delete filter.userId;
         }
-
         const [orders, total] = await Promise.all([
             Order.find(filter)
                 .sort({ orderDate: -1 })
