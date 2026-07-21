@@ -31,7 +31,7 @@ function ContactCTA({ phoneNumber, mapsLink }) {
                 <div className="text-5xl md:text-6xl mb-4">💬</div>
                 <h3 className="font-serif text-2xl md:text-3xl text-[#f2ede4]">Ada Pertanyaan?</h3>
                 <p className="text-xs md:text-sm text-[#a89080] font-light leading-relaxed max-w-xs mx-auto">
-                    Ingin reservasi tempat atau sekadar bertanya? Hubungi kami langsung via WhatsApp.
+                    Ingin reservasi tempat atau sekadar bertanya? Hubungi kami via WhatsApp.
                 </p>
                 <div className="flex flex-col gap-3 pt-4">
                     <a

@@ -148,7 +148,6 @@ export const deleteCoupon = async (req, res) => {
 export const assignCouponToUsers = async (req, res) => {
     try {
         const { couponId, userIds } = req.body;
-
         if (!couponId || !userIds || userIds.length === 0) {
             return res.status(400).json({ message: "Invalid data" });
         }
@@ -157,19 +156,16 @@ export const assignCouponToUsers = async (req, res) => {
             return res.status(404).json({ message: "Coupon not found" });
         }
         if (coupon.isActive === false) {
+            
             return res.status(400).json({ message: "Cannot assign inactive coupon" });
         }
-
         const data = userIds.map(userId => ({
             userId,
             couponId
         }));
-
         const result = await UserCoupon.insertMany(data, { ordered: false });
-
         res.status(201).json({
-            message: "Coupons assigned",
-            data: result
+            message: "Coupons assigned"
         });
     } catch (err) {
         res.status(500).json({ message: err.message });

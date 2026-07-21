@@ -294,11 +294,11 @@ export const getOrderStats = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
 
-        const start = startDate ? new Date(startDate) : (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return d; })();
-        start.setHours(0, 0, 0, 0);
+        const start = startDate ? new Date(`${startDate.split('T')[0]}T00:00:00+07:00`) : (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return d; })();
+        // start.setHours(0, 0, 0, 0);
 
-        const end = endDate ? new Date(endDate) : new Date();
-        end.setHours(23, 59, 59, 999);
+        const end = endDate ? new Date(`${endDate.split('T')[0]}T23:59:59+07:00`) : new Date();
+        // end.setHours(23, 59, 59, 999);
 
         const dateFilter = { orderDate: { $gte: start, $lte: end } };
 
@@ -377,13 +377,14 @@ export const getOrderStats = async (req, res) => {
 
         const salesData = [];
         const cursor = new Date(start);
+        console.log(cursor);
         while (cursor <= end) {
             const key = cursor.toISOString().split('T')[0];
-            const label = cursor.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const label = cursor.toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
             salesData.push({ name: label, date: key, sales: chartMap[key] || 0 });
             cursor.setDate(cursor.getDate() + 1);
         }
-
+        console.log(salesData);
         res.json({
             stats: {
                 totalIncome: summary.totalIncome,
@@ -529,11 +530,9 @@ export const downloadExcelReport = async (req, res) => {
 
 export const getDailyStats = async (req, res) => {
     try {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
+         const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
+        const startOfDay = new Date(`${todayStr}T00:00:00+07:00`);
+        const endOfDay = new Date(`${todayStr}T23:59:59.999+07:00`);
 
         const stats = await Order.aggregate([
             {
