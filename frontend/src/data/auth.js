@@ -1,9 +1,10 @@
 const baseUrl = import.meta.env.VITE_API_URL;
 
 export const login = async ({ email, password }) => {
+    const emailLowerCase = email.toLowerCase();
     const response = await fetch(`${baseUrl}/auth/login`, {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: emailLowerCase, password }),
         headers: {
             'Content-Type': 'application/json'
         }
@@ -12,9 +13,10 @@ export const login = async ({ email, password }) => {
 }
 
 export const register = async ({ name, email, password, phone }) => {
+    const emailLowerCase = email.toLowerCase();
     const response = await fetch(`${baseUrl}/auth/register`, {
         method: 'POST',
-        body: JSON.stringify({ username : name, email, password, phone }),
+        body: JSON.stringify({ username : name, email: emailLowerCase, password, phone }),
         headers: {
             'Content-Type': 'application/json'
         }
