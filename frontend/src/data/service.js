@@ -617,6 +617,25 @@ export const getMaterials = async () => {
     return data;
 }
 
+export const getMaterialHistory = async () => {
+    const response = await fetch(`${baseUrl}/admin/material/history`, {
+        method: 'GET',
+        headers: headers()
+    });
+    if (!response.ok) {
+        Toast.fire({
+            icon: 'error',
+            iconColor: '#f43f5e',
+            title: 'Failed get material history',
+            background: '#fff1f2',
+            color: '#9f1239'
+        });
+        return [];
+    }
+    const data = await response.json();
+    return data;
+}
+
 export const addMaterial = async (formData) => {
     const response = await fetch(`${baseUrl}/admin/material/add`, {
         method: 'POST',

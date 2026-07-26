@@ -23,6 +23,7 @@ import OrderDetailModal from '../components/dashboard/OrderDetailModal';
 import FrontPage from '../components/dashboard/FrontPage';
 import MaterialTable from '../components/dashboard/MaterialTable';
 import MaterialSlideOver from '../components/dashboard/MaterialSlideOver';
+import MaterialManagement from '../components/dashboard/MaterialManagement';
 
 // ─── Category Modal Content (controlled) ─────────────────────────────────────
 const CategoryModalContent = ({ value, onChange }) => (
@@ -403,17 +404,12 @@ const Dashboard = () => {
             <UserTable rawData={user} onAssignCoupon={(users) => { setIsAssignCouponOpen(true); setSelectedUsersForCoupon(users) }} />
           )}
           {activeTab === 'material' && (
-            <>
-              <div className="flex justify-end mb-4">
-                <button
-                  onClick={openAddMaterial}
-                  className="flex items-center gap-2 bg-[#8C6A53] hover:bg-[#725541] text-white px-6 md:px-8 py-3 rounded-2xl font-bold transition-all transform hover:-translate-y-1 shadow-lg shadow-[#8C6A53]/20"
-                >
-                  <Plus size={20} /> Add Material
-                </button>
-              </div>
-              <MaterialTable data={materials} onEdit={openEditMaterial} onDelete={onDeleteMaterial} />
-            </>
+            <MaterialManagement
+              materials={materials}
+              onEdit={openEditMaterial}
+              onDelete={onDeleteMaterial}
+              onAdd={openAddMaterial}
+            />
           )}
           {activeTab === 'coupons' && (
             <CouponTable data={coupons} onEdit={openEditCoupon} onDelete={onDeleteCoupon} />

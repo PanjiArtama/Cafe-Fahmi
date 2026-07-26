@@ -26,7 +26,7 @@ const MaterialTable = ({ data, onEdit, onDelete }) => {
       accessorKey: 'name',
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#8C6A53]/10 to-[#D9C5B2]/20 flex items-center justify-center text-[#8C6A53] font-bold text-sm shrink-0">
+          <div className="w-9 h-9 rounded-lg bg-linear-to-br from-[#8C6A53]/10 to-[#D9C5B2]/20 flex items-center justify-center text-[#8C6A53] font-bold text-sm shrink-0">
             {row.original.name.charAt(0).toUpperCase()}
           </div>
           <span className="font-bold text-[#4A3728]">{row.original.name}</span>
