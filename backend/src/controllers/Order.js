@@ -6,6 +6,68 @@ import Coupon from "../models/Coupon.js";
 import UserCoupon from "../models/UserCoupon.js";
 import { generateOrdersExcel } from "../utils/excelGenerator.js";
 
+import MaterialHistory from '../models/MaterialHistory.js';
+
+export const changeStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!['processing', 'completed', 'cancelled'].includes(status)) {
+            return res.status(400).json({ message: "Invalid status" });
+        }
+
+        const order = await Order.findById(id).populate({
+            path: "orderDetails",
+            populate: { path: "productId" }
+        });
+
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        // Restore material stock when cancelling an order
+        if (status === 'cancelled' && order.status !== 'cancelled') {
+            for (const detail of order.orderDetails) {
+                const product = await Product.findById(detail.productId._id).populate("composition.materialId");
+
+                if (product && product.composition && product.composition.length > 0) {
+                    for (const comp of product.composition) {
+                        const restoreQty = comp.quantity * detail.quantity;
+
+                        // Cari material untuk mendapatkan stok sebelumnya
+                        const material = await Material.findById(comp.materialId._id);
+                        if (material) {
+                            const previousStock = material.stock;
+                            material.stock += restoreQty;
+                            await material.save();
+
+                            // Catat riwayat pengembalian stok (IN)
+                            await MaterialHistory.create({
+                                materialId: material._id,
+                                transactionType: 'RETURN',
+                                quantity: restoreQty,
+                                previousStock: previousStock,
+                                currentStock: material.stock,
+                                notes: `Restored stock from cancelled order: ${order._id}`
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        order.status = status;
+        order.orderDate = new Date();
+        await order.save();
+
+        res.json(order);
+
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 export const createOrder = async (req, res) => {
     try {
         const { userId, items, guestName, couponCode } = req.body;
@@ -35,16 +97,31 @@ export const createOrder = async (req, res) => {
             }
         }
 
-        // 2. Reduce material stock
+        // 2. Reduce material stock and log history
         for (const item of items) {
             const product = await Product.findById(item.productId).populate("composition.materialId");
 
             if (product.composition && product.composition.length > 0) {
                 for (const comp of product.composition) {
                     const reduceQty = comp.quantity * item.quantity;
-                    await Material.findByIdAndUpdate(comp.materialId._id, {
-                        $inc: { stock: -reduceQty }
-                    });
+
+                    // Cari material untuk mendapatkan stok sebelumnya
+                    const material = await Material.findById(comp.materialId._id);
+                    if (material) {
+                        const previousStock = material.stock;
+                        material.stock -= reduceQty;
+                        await material.save();
+
+                        // Catat riwayat pengurangan stok (OUT)
+                        await MaterialHistory.create({
+                            materialId: material._id,
+                            transactionType: 'ORDER',
+                            quantity: reduceQty,
+                            previousStock: previousStock,
+                            currentStock: material.stock,
+                            notes: `Used for new order by ${userId ? 'User ID ' + userId : guestName}`
+                        });
+                    }
                 }
             }
         }
@@ -71,7 +148,6 @@ export const createOrder = async (req, res) => {
         let discountAmount = 0;
         let couponId = null;
 
-
         if (couponCode && userId) {
             const coupon = await Coupon.findOne({ code: couponCode });
 
@@ -87,7 +163,6 @@ export const createOrder = async (req, res) => {
                 return res.status(400).json({ message: "Minimum purchase not reached" });
             }
 
-
             const userCoupon = await UserCoupon.findOne({
                 userId,
                 couponId: coupon._id,
@@ -102,7 +177,6 @@ export const createOrder = async (req, res) => {
                 return res.status(400).json({ message: "Coupon already used" });
             }
 
-
             if (coupon.type === "percentage") {
                 discountAmount = (subtotalAmount * coupon.value) / 100;
 
@@ -114,7 +188,6 @@ export const createOrder = async (req, res) => {
             }
 
             couponId = coupon._id;
-
 
             userCoupon.isUsed = true;
             userCoupon.usedAt = new Date();
@@ -139,52 +212,6 @@ export const createOrder = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
-
-export const changeStatus = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body;
-
-        if (!['processing', 'completed', 'cancelled'].includes(status)) {
-            return res.status(400).json({ message: "Invalid status" });
-        }
-
-        const order = await Order.findById(id).populate({
-            path: "orderDetails",
-            populate: { path: "productId" }
-        });
-
-        if (!order) {
-            return res.status(404).json({ message: "Order not found" });
-        }
-
-        // Restore material stock when cancelling an order
-        if (status === 'cancelled' && order.status !== 'cancelled') {
-            for (const detail of order.orderDetails) {
-                const product = await Product.findById(detail.productId._id).populate("composition.materialId");
-
-                if (product && product.composition && product.composition.length > 0) {
-                    for (const comp of product.composition) {
-                        const restoreQty = comp.quantity * detail.quantity;
-                        await Material.findByIdAndUpdate(comp.materialId._id, {
-                            $inc: { stock: restoreQty }
-                        });
-                    }
-                }
-            }
-        }
-
-        order.status = status;
-        order.orderDate = new Date();
-        await order.save();
-
-        res.json(order);
-
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-};
-
 /**
  * GET /admin/order/get
  * Supports ?status=processing to fetch only ongoing orders (lightweight).
@@ -530,7 +557,7 @@ export const downloadExcelReport = async (req, res) => {
 
 export const getDailyStats = async (req, res) => {
     try {
-         const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
+        const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
         const startOfDay = new Date(`${todayStr}T00:00:00+07:00`);
         const endOfDay = new Date(`${todayStr}T23:59:59.999+07:00`);
 
